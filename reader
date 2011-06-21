@@ -1,0 +1,25 @@
+
+[indentation]
+indent_width=4
+indent_type=0
+indent_hard_tab_width=8
+detect_indent=false
+indent_mode=2
+
+[project]
+name=RSS
+base_path=/home/b_sodonon/projects/python/naufrago
+
+[long line marker]
+long_line_behaviour=1
+long_line_column=72
+
+[files]
+current_page=5
+FILE_NAME_0=18355;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedengine.py;0;4
+FILE_NAME_1=130764;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago.py;0;4
+FILE_NAME_2=170;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/client.py;0;4
+FILE_NAME_3=9168;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedtree.py;0;4
+FILE_NAME_4=13012;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/itemlist.py;0;4
+FILE_NAME_5=1162;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/reader.py;0;4
+FILE_NAME_6=0;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedview.py;0;4

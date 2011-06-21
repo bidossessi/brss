@@ -1,0 +1,13 @@
+<ui>
+    <menu name='TreeMenu'>
+        <menuitem action='Mark all as read'/>
+        <menuitem action='Update'/>
+        <menuitem action='Edit'/>
+        <menuitem action='Delete'/>
+        <separator/>
+        <menuitem action='New feed'/>
+        <menuitem action='New category'/>
+        <separator/>
+        <menuitem action='Quit'/>
+    </menu>
+</ui>
