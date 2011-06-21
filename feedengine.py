@@ -39,6 +39,17 @@ import dbus.service
 import dbus.mainloop.glib
 from xml.etree import ElementTree
 
+def make_time(string=False):
+    split = str(datetime.datetime.now()).split(' ')
+    ds = split[0].split('-')
+    ts = split[1].split(':')
+    t = datetime.datetime(int(ds[0]), int(ds[1]), int(ds[2]), int(ts[0]), int(ts[1]), int(float(ts[2])))
+    if string:
+        return str(time.mktime(t.timetuple()))
+    return time.mktime(t.timetuple())
+
+def make_uuid(data="fast random string"):
+    return hashlib.md5(str(make_time())+str(data)).hexdigest().encode("utf-8")
 
 class FeedEngine (dbus.service.Object):
     """ The feedengine handles web and database calls."""
@@ -51,8 +62,9 @@ class FeedEngine (dbus.service.Object):
             assert self.__category_exists(category['name']) == False
             category['name'] = category['name'].encode('utf-8')
             self.__add_category(category)
+            self.notice('added', "New category added: {0}".format(category['name']))
         except AssertionError:
-            self.warning("db-error", 'Category already exists!')
+            self.warning("error", 'Category already exists!')
 
     @dbus.service.method('org.naufrago.feedengine',
                          in_signature='a{ss}')
@@ -65,7 +77,6 @@ class FeedEngine (dbus.service.Object):
     
     @dbus.service.method('org.naufrago.feedengine')
     def import_opml(self, filename):
-        print "importing ", filename
         f = open(os.path.abspath(filename), 'r')
         tree = ElementTree.parse(f)
         current_category = '1'
@@ -79,7 +90,8 @@ class FeedEngine (dbus.service.Object):
                 if len(node) is not 0:
                     self.add_category({'name':name})
                     current_category = self.__get_category(name)['id']
-
+        self.notice('added', 'Feeds imported!')
+    
     @dbus.service.method('org.naufrago.feedengine',
                             in_signature='', out_signature='aa{ss}')
     def get_categories(self):
@@ -106,19 +118,22 @@ class FeedEngine (dbus.service.Object):
             if not feed.has_key('category'):
                 feed['category'] = 1
             rfeed = self.__add_feed(feed)
+            self.notice('added', "New feed added: {0}".format(feed['title']))
             # update feed while we're at it
             count = self.__update_feed(rfeed, f)
             self.notice('new', str(count))
             
         except AssertionError:
-            self.warning("db-error", 'Feed already exists!')
+            self.warning("error", 'Feed already exists!')
     
     
     @dbus.service.method('org.naufrago.feedengine')
     def update(self, item=None):
+        gmap = {False:0}
         if item == 'all': 
             count = self.__update_all()
             self.notice('new', "Feeds updated! ({0})".format(count))
+            return
         elif item and item.has_key('type') and item['type'] in ['feed', 'category']:
             if item['type'] == 'feed':
                 feed = self.__get_feed(item['id'])
@@ -126,9 +141,25 @@ class FeedEngine (dbus.service.Object):
             elif item['type'] == 'category':
                 count = self.__update_category(item)
             self.notice('new', "[{0}] {1} updated! ({2})".format(
-                        item['type'].capitalize(), item['name'].encode('utf-8'), count))
+                        item['type'].capitalize(), item['name'].encode('utf-8'), 
+                            gmap.get(count)))
         else:
             self.notice('new', "Nothing to update")
+    
+    @dbus.service.method('org.naufrago.feedengine')
+    def delete(self, item=None):
+        if not item:
+            return
+        if item and item.has_key('type') and item['type'] in ['feed', 'category']:
+            if item['type'] == 'feed':
+                feed = self.__get_feed(item['id'])
+                self.__delete_feed(feed)
+            elif item['type'] == 'category':
+                self.__delete_category(item)
+            self.notice('new', "[{0}] {1} deleted!)".format(
+                        item['type'].capitalize(), item['name'].encode('utf-8')))
+        else:
+            self.notice('new', "Nothing to do")
         
     @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}', 
                         out_signature='aa{ss}')
@@ -214,7 +245,7 @@ class FeedEngine (dbus.service.Object):
             old_category = self.__get_category(category['name'])
             # update the category
         except AssertionError:
-            self.warning("db-error", 'Category does not exist!')
+            self.warning("error", 'Category does not exist!')
 
     def __edit_feed(self, feed):
         try:
@@ -222,7 +253,7 @@ class FeedEngine (dbus.service.Object):
             old_feed = self.__get_feed(feed['id'])
             # update the feed
         except AssertionError:
-            self.warning("db-error", 'Feed does not exist!')
+            self.warning("error", 'Feed does not exist!')
 
     def __update_all(self):
         count = 0
@@ -236,6 +267,16 @@ class FeedEngine (dbus.service.Object):
         for f in feeds:
             count += self.__update_feed(f)
         return count
+    
+    def __delete_category(self, category):
+        feeds = self.__get_feeds_for(category['id'])
+        for f in feeds:
+            self.__delete_feed(f)
+        q = 'DELETE FROM categories WHERE id = "{0}"'.format(category['id'])
+        cursor = self.conn.cursor()        
+        cursor.execute(q)
+        self.conn.commit()
+        cursor.close()
         
     def __update_feed(self, feed, f=None):
         cursor = self.conn.cursor()
@@ -243,7 +284,6 @@ class FeedEngine (dbus.service.Object):
             f = feedparser.parse(feed['url'])
         # update basic feed informations
         dont_parse = False
-        count = 0
         bozo_invalid = ['urlopen', 'Document is empty'] # Custom non-wanted bozos
         if not len(f.entries) > 0: # Feed has no entries...
             cursor.execute('SELECT count(id) FROM articles WHERE feed_id = ?', [feed['id']])
@@ -254,7 +294,6 @@ class FeedEngine (dbus.service.Object):
             for item in bozo_invalid:
                 if item in str(f.bozo_exception):
                     return False
-        print f.feed.title
         q = 'UPDATE feeds SET name = "{0}" WHERE id = "{1}"'.format(f.feed.title.encode('utf-8'),feed['id'])
         cursor.execute(q)
         self.conn.commit()
@@ -262,13 +301,29 @@ class FeedEngine (dbus.service.Object):
         self.__insert_articles_for(feed, f)
         self.__clean_up_feed(feed)
         return self.__count_unread_items(feed)
-
+    
+    def __delete_feed(self, feed):
+        articles = self.get_articles_for(feed)
+        for a in articles:
+            self.__delete_article(a)
+        # now delete
+        q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
+        cursor = self.conn.cursor()        
+        cursor.execute(q)
+        self.conn.commit()
+        cursor.close()
+    
+    def __delete_article(self, art):
+        # delete images first.
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT name,url FROM images WHERE article_id = ?', [article['id']])
+        row = cursor.fetchall()
     def __clean_up_feed(self, feed):
         pass
 
     def __count_unread_items(self, feed=None):
         if feed:
-            q = 'SELECT COUNT(id) FROM articles WHERE feed_id = "' + feed['id'] + '" AND read = 0'
+            q = 'SELECT COUNT(id) FROM articles WHERE feed_id = "{0}" AND read = 0'.format(feed['id'])
         else:
             q = 'SELECT COUNT(id) FROM articles WHERE read = 0'
         cursor = self.conn.cursor()
@@ -278,7 +333,7 @@ class FeedEngine (dbus.service.Object):
 
     def __count_starred_items(self, feed=None):
         if feed:
-            q = 'SELECT COUNT(id) FROM articles WHERE feed_id = ' + feed['id'] + ' AND starred = 1'
+            q = 'SELECT COUNT(id) FROM articles WHERE feed_id = "{0}" AND starred = 1'.format(feed['id'])
         else:
             q = 'SELECT COUNT(id) FROM articles WHERE starred = 1'
         cursor = self.conn.cursor()
@@ -337,7 +392,6 @@ class FeedEngine (dbus.service.Object):
     def __add_category(self, category):
         cursor = self.conn.cursor()
         q = 'INSERT INTO categories VALUES(null, "{0}")'.format(category['name'])
-        print q
         cursor.execute(q)
         self.conn.commit()
         cursor.close()
@@ -347,7 +401,6 @@ class FeedEngine (dbus.service.Object):
         id = hashlib.md5(feed['url']).hexdigest().encode("utf-8")
         #~ q = 'INSERT INTO feeds VALUES(?, ?, ?, ?)', [id.decode('utf-8'), feed['title'],feed['url'], 1]
         q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}")'.format(id, feed['title'], feed['url'], feed['category'])
-        print q
         cursor = self.conn.cursor()
         cursor.execute(q)
         self.conn.commit()
@@ -371,7 +424,7 @@ class FeedEngine (dbus.service.Object):
                             content, link, uid, timestamp, images, ghost)
                 self.__fetch_remote_images_for(article)
             except AssertionError:
-                #~ self.warning("db-error", "Article already exists")
+                #~ self.warning("error", "Article already exists")
                 pass
 
     def __find_images_in_article(self, description):
@@ -400,13 +453,10 @@ class FeedEngine (dbus.service.Object):
             row = cursor.fetchone()
             # not found, download
             if row is None:
-                cursor.execute('SELECT MAX(id) FROM images')
-                id_entry_max = cursor.fetchone()[0]
-                if id_entry_max is None: id_entry_max = 1
-                else: id_entry_max += 1
-                if self.__get_remote_image(i, str(id_entry_max)):
+                name = make_uuid(i)
+                if self.__get_remote_image(i, name):
                     # add to db only AFTER we successfully retrive the image
-                    cursor.execute('INSERT INTO images VALUES(null, ?, ?, ?)', [id_entry_max,i,article['id']])
+                    cursor.execute('INSERT INTO images VALUES(null, ?, ?, ?)', [name,i,article['id']])
                     self.conn.commit()
             # found
             else:
@@ -452,12 +502,12 @@ class FeedEngine (dbus.service.Object):
         if (row is not None) and (len(row)>0):
             for img in row:
                 t = 'file://' + os.path.join(self.images_path, str(img[0]))
-                print t
                 article['content'] = article['content'].replace(
                         img[1], t)
                 links.append(t)
             return article, links
-
+        else:
+            return article, ['valid']
     def __make_articles_list(self, q):
         """Convenience function."""
         articles = []
@@ -501,12 +551,6 @@ class FeedEngine (dbus.service.Object):
         
     def __check_feed_item(self, feed_item):
         """Sets a default value for feed items if there's not any."""
-        def make_time():
-            split = str(datetime.datetime.now()).split(' ')
-            ds = split[0].split('-')
-            ts = split[1].split(':')
-            t = datetime.datetime(int(ds[0]), int(ds[1]), int(ds[2]), int(ts[0]), int(ts[1]), int(float(ts[2])))
-            return time.mktime(t.timetuple())
             
         if(hasattr(feed_item,'date_parsed')):
             dp = feed_item.date_parsed
@@ -539,18 +583,18 @@ class FeedEngine (dbus.service.Object):
         else: link = 'Without link'
 
         if(hasattr(feed_item,'id')):
-            if feed_item.id is not None:
+            if feed_item.id is not None and feed_item.id != '':
                 id = feed_item.id.encode("utf-8")
             else:
                 if title != '':
-                    id = hashlib.md5(title).hexdigest().encode("utf-8")
+                    id = make_uuid(title)
                 else:
-                    id = hashlib.md5(content).hexdigest().encode("utf-8")
+                    id = make_uuid(content)
         else:
             if title != '':
-                id = hashlib.md5(title).hexdigest().encode("utf-8")
+                id = make_uuid(title)
             else:
-                id = hashlib.md5(content).hexdigest().encode("utf-8")
+                id = make_uuid(content)
 
         return (secs, title, content, link, id)    
     
@@ -558,9 +602,9 @@ class FeedEngine (dbus.service.Object):
         cursor = self.conn.cursor()
         cursor.executescript('''
             CREATE TABLE categories(id integer PRIMARY KEY, name varchar(32) NOT NULL);
-            CREATE TABLE feeds(id varchar(1024) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL);
-            CREATE TABLE articles(id varchar(1024) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, link varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, images TEXT, feed_id integer NOT NULL, ghost integer NOT NULL);
-            CREATE TABLE images(id integer PRIMARY KEY, name integer NOT NULL, url TEXT NOT NULL, article_id varchar(1024) NOT NULL);
+            CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL);
+            CREATE TABLE articles(id varchar(256) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, link varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, images TEXT, feed_id integer NOT NULL, ghost integer NOT NULL);
+            CREATE TABLE images(id integer PRIMARY KEY, name varchar(256) NOT NULL, url TEXT NOT NULL, article_id varchar(256) NOT NULL);
             INSERT INTO categories VALUES(null, 'General');
             ''')
         self.conn.commit()
@@ -606,7 +650,8 @@ class FeedEngine (dbus.service.Object):
         self.__clean_up()
         Gtk.main_quit()
         return "Quitting"
-        
+
+
 if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     session_bus = dbus.SessionBus()

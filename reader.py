@@ -157,28 +157,28 @@ class Reader (Gtk.Window, GObject.GObject):
         actions = [
                 ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Adds a feed'),
-                ('New category', "Gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
-                ('Delete feed', "Gtk-clear", 'Delete feed', None, 'Deletes a feed'),
-                ('Delete category', "Gtk-cancel", 'Delete category', None, 'Deletes a category'),
-                ('Import feeds', "Gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.import_feeds),
-                ('Export feeds', "Gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
-                ('Quit', "Gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
+                ('New category', "gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
+                ('Delete feed', "gtk-clear", 'Delete feed', None, 'Deletes a feed'),
+                ('Delete category', "gtk-cancel", 'Delete category', None, 'Deletes a category'),
+                ('Import feeds', "gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.import_feeds),
+                ('Export feeds', "gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
+                ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('EditMenu', None, 'E_dit'),
-                ('Edit', "Gtk-edit", '_Edit', '<control>E', 'Edits the selected element'),
-                ('Preferences', "Gtk-execute", '_Preferences', '<control>P', 'Shows preferences'),
+                ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edits the selected element'),
+                ('Preferences', "gtk-execute", '_Preferences', '<control>P', 'Shows preferences'),
                 ('NetworkMenu', None, '_Network'),
                 ('Update', None, '_Update', '<control>U', 'Updates the selected feed', self.__update_feed),
-                ('Update all', "Gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
-                ('Previous', "Gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous),
-                ('Next', "Gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next),
-                ('Stop update', "Gtk-stop", 'Stop', None, 'Stop update'),
+                ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
+                ('Previous', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous),
+                ('Next', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next),
+                ('Stop update', "gtk-stop", 'Stop', None, 'Stop update'),
                 ('ViewMenu', None, '_View'),
                 ('HelpMenu', None, '_Help'),
-                ('About', "Gtk-about", '_About', None, 'About'),
+                ('About', "gtk-about", '_About', None, 'About'),
                 ]
         tactions = [
-                ('Search', "Gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__search),
-                ('FullScreen', "Gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
+                ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__search),
+                ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
                 ]
 
         ag.add_actions(actions)
@@ -229,6 +229,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.view.connect('article-loaded', self.ilist.mark_read)
         self.view.connect('link-clicked', self.__to_browser)
         self.engine.connect_to_signal('notice', self.status.message)
+        self.engine.connect_to_signal('added', self.__populate_menu)
+        self.engine.connect_to_signal('added', self.status.message)
         # might want to highlight these a bit more
         #~ self.engine.connect_to_signal('warning', self.status.message)
     
@@ -238,8 +240,8 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog = Gtk.FileChooserDialog("Open..",
                                     self,
                                     Gtk.FileChooserAction.OPEN,
-                                    (Gtk.STOCK_OPEN, Gtk.ResponseType.OK,
-                                    Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL))
+                                    (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                                      Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
 
         dialog.set_default_response(Gtk.ResponseType.OK)
 

@@ -64,7 +64,7 @@ class Status (Gtk.HBox):
     def __handle_context(self, context):
         """
         Show the right icon depending on the context.
-        For now we have: new, db-error, wait
+        For now we have: new, error, wait
         """
         if context == "wait":
             self.busy.show()
@@ -73,5 +73,5 @@ class Status (Gtk.HBox):
             self.ok_img.show()
         if context == "warning":
             self.warning_img.show()
-        if context == "db-error":
+        if context == "error":
             self.error_img.show()
