@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       feedtree.py
+#       status.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by

@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       feedview.py
+#       reader.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -101,6 +101,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.toggle_read         = self.engine.get_dbus_method('toggle_read', 'org.naufrago.feedengine')
         self.count_unread        = self.engine.get_dbus_method('count_unread', 'org.naufrago.feedengine')
         self.count_starred       = self.engine.get_dbus_method('count_starred', 'org.naufrago.feedengine')
+        self.import_opml         = self.engine.get_dbus_method('import_opml', 'org.naufrago.feedengine')
         
     def __create__menu(self):
         ui_string = """<ui>
@@ -148,7 +149,7 @@ class Reader (Gtk.Window, GObject.GObject):
                    </toolbar>
                   </ui>"""
 
-        # Generate a stock image from a file (http://faq.pygtk.org/index.py?req=show&file=faq08.012.htp)
+        # Generate a stock image from a file (http://faq.pyGtk.org/index.py?req=show&file=faq08.012.htp)
 
 
 
@@ -156,28 +157,28 @@ class Reader (Gtk.Window, GObject.GObject):
         actions = [
                 ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Adds a feed'),
-                ('New category', "gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
-                ('Delete feed', "gtk-clear", 'Delete feed', None, 'Deletes a feed'),
-                ('Delete category', "gtk-cancel", 'Delete category', None, 'Deletes a category'),
-                ('Import feeds', "gtk-redo", 'Import feeds', None, 'Imports a feedlist'),
-                ('Export feeds', "gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
-                ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
+                ('New category', "Gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
+                ('Delete feed', "Gtk-clear", 'Delete feed', None, 'Deletes a feed'),
+                ('Delete category', "Gtk-cancel", 'Delete category', None, 'Deletes a category'),
+                ('Import feeds', "Gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.import_feeds),
+                ('Export feeds', "Gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
+                ('Quit', "Gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('EditMenu', None, 'E_dit'),
-                ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edits the selected element'),
-                ('Preferences', "gtk-execute", '_Preferences', '<control>P', 'Shows preferences'),
+                ('Edit', "Gtk-edit", '_Edit', '<control>E', 'Edits the selected element'),
+                ('Preferences', "Gtk-execute", '_Preferences', '<control>P', 'Shows preferences'),
                 ('NetworkMenu', None, '_Network'),
                 ('Update', None, '_Update', '<control>U', 'Updates the selected feed', self.__update_feed),
-                ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
-                ('Previous', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous),
-                ('Next', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next),
-                ('Stop update', "gtk-stop", 'Stop', None, 'Stop update'),
+                ('Update all', "Gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
+                ('Previous', "Gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous),
+                ('Next', "Gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next),
+                ('Stop update', "Gtk-stop", 'Stop', None, 'Stop update'),
                 ('ViewMenu', None, '_View'),
                 ('HelpMenu', None, '_Help'),
-                ('About', "gtk-about", '_About', None, 'About'),
+                ('About', "Gtk-about", '_About', None, 'About'),
                 ]
         tactions = [
-                ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__search),
-                ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
+                ('Search', "Gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__search),
+                ('FullScreen', "Gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
                 ]
 
         ag.add_actions(actions)
@@ -226,9 +227,42 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect_after('read-toggled', self.tree.update_unread)
         self.ilist.connect('dcall-request', self.__handle_dcall)
         self.view.connect('article-loaded', self.ilist.mark_read)
+        self.view.connect('link-clicked', self.__to_browser)
         self.engine.connect_to_signal('notice', self.status.message)
         # might want to highlight these a bit more
         #~ self.engine.connect_to_signal('warning', self.status.message)
+    
+    
+    #~ def import_feeds(self, *args):pass
+    def import_feeds(self, *args):
+        dialog = Gtk.FileChooserDialog("Open..",
+                                    self,
+                                    Gtk.FileChooserAction.OPEN,
+                                    (Gtk.STOCK_OPEN, Gtk.ResponseType.OK,
+                                    Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL))
+
+        dialog.set_default_response(Gtk.ResponseType.OK)
+
+        filter = Gtk.FileFilter()
+        filter.set_name("opml/xml")
+        filter.add_pattern("*.opml")
+        filter.add_pattern("*.xml")
+        dialog.add_filter(filter)
+
+        filter = Gtk.FileFilter()
+        filter.set_name("All files")
+        filter.add_pattern("*")
+        dialog.add_filter(filter)
+
+        response = dialog.run()
+        filename = os.path.abspath(dialog.get_filename())
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            dialog.hide()
+            self.import_opml(filename, 
+                reply_handler=self.__populate_menu,
+                error_handler=self.__to_log)
     
     def __populate_menu(self, *args):
         cats = self.get_categories()
@@ -263,7 +297,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 error_handler=self.__to_log)
 
     def __handle_dcall(self, caller, name, item):
-        print "{0}: {1}".format(name, item)
+        #~ print "{0}: {1}".format(name, item)
         if name in ['Update', 'Update all']:
             if item == 'all':
                 self.status.message("wait", "Updating all Feeds")
@@ -277,7 +311,7 @@ class Reader (Gtk.Window, GObject.GObject):
             self.ilist.mark_all_read()
         
         elif name in ['Open in Browser']:
-            self.__to_browser(item['url'])
+            self.__to_browser(caller, item['url'])
         
         elif name in ['Copy Url to Clipboard']:
             self.__to_clipboard(item['url'])
@@ -297,10 +331,13 @@ class Reader (Gtk.Window, GObject.GObject):
     def __to_log(self, *args):
         print 'Log: ', args
     
-    def __to_browser(self, link):
+    def __to_browser(self, caller, link):
         # try the config
+        print link
         # fallback to default
-        webbrowser.open(link)
+        self.view.link_button.set_uri(link)
+        self.view.link_button.activate()
+        
     def __previous(self, *args):
         self.emit('previous-item')
     def __next(self, *args):
@@ -322,7 +359,7 @@ class Reader (Gtk.Window, GObject.GObject):
             self.tree.hide()
             self.fullscreen()
             self.is_fullscreen = True
-        
+    
     def quit(self, *args):
         Gtk.main_quit()
     

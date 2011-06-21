@@ -3,7 +3,7 @@
 #
 #       feedtree.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #       MA 02110-1301, USA.
 #       
 #       
+#FIXME: DnD is broken!!!
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
@@ -38,6 +39,10 @@ class FeedTree (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_LAST, 
             None,
             (GObject.TYPE_PYOBJECT,)),
+        "feed-moved" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            (GObject.TYPE_PYOBJECT,)),
         "dcall-request" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
@@ -47,42 +52,39 @@ class FeedTree (Gtk.VBox, GObject.GObject):
     def __init__(self):
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
-        ## label
-        self.lal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
-        self.lal.set_padding(2, 2, 5, 5)
-        self.label = Gtk.Label('Feeds')
-        self.lal.add(self.label)
+        GObject.type_register(FeedTree)
         self.menuview = Gtk.TreeView()
-        self.menuview.connect("row-activated", self.__row_activated)
         self.menuview.set_headers_visible(False)
         self.menucol = Gtk.TreeViewColumn()
         self.textcell = Gtk.CellRendererText()
         self.iconcell = Gtk.CellRendererPixbuf()
         self.menucol.pack_start(self.iconcell, False)
         self.menucol.pack_start(self.textcell, True)
-        # store structure (type, id, name, count, weight)
         self.menucol.set_cell_data_func(self.textcell, self.__format_name)
         self.menucol.set_cell_data_func(self.iconcell, self.__format_icon)
-        #~ self.menucol.add_attribute(self.iconcell, "stock-id", 4)
         self.menuview.append_column(self.menucol)
         self.menuselect = self.menuview.get_selection()
-        self.menuselect.connect("changed", self.__selection_changed)
         # containers
-        self.msc = Gtk.ScrolledWindow()
-        self.msc.set_shadow_type(Gtk.ShadowType.IN)
-        self.msc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.msc.add(self.menuview)
-        self.mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
-        self.mal.add(self.msc)
-        #~ self.pack_start(self.lal, False, False,0)
-        self.pack_start(self.mal, True, True,0)
+        msc = Gtk.ScrolledWindow()
+        msc.set_shadow_type(Gtk.ShadowType.IN)
+        msc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        msc.add(self.menuview)
+        mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
+        self.pack_start(msc, True, True,0)
         menu = FeedTreeMenu(self)
         self.current_item = None
-        GObject.type_register(FeedTree)
+        #~ self.__setup_dnd() #FIXME: DnD is broken
+        self.__setup_icons()
+        self.__connect_signals()
         
+    def __connect_signals(self):
+        self.menuselect.connect("changed", self.__selection_changed)
+        self.menuview.connect("row-activated", self.__row_activated)
+        
+    def __setup_icons(self):
         factory = Gtk.IconFactory()
         s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('feed.svg'))
+        s.set_filename(os.path.abspath('rss.png'))
         iconset = Gtk.IconSet()
         iconset.add_source(s)
         factory.add('feed', iconset)
@@ -112,6 +114,20 @@ class FeedTree (Gtk.VBox, GObject.GObject):
         factory.add('star-folder', iconset)
         factory.add_default()
 
+    
+    def __setup_dnd(self):
+        target_entries = (('example', Gtk.TargetFlags.SAME_WIDGET, 1),)
+        # target_entries=[(drag type string, target_flags, application integer ID used for identification purposes)]
+        self.menuview.enable_model_drag_source(Gdk.EventMask.BUTTON1_MOTION_MASK, target_entries, Gdk.DragAction.MOVE)
+        self.menuview.enable_model_drag_dest(target_entries, Gdk.DragAction.MOVE)
+        self.menuview.connect('drag-data-received', self.__row_dragged)
+    
+    def __row_dragged(self, treeview, drag_context, x, y, selection_data, info, eventtime):
+        model, source = treeview.get_selection().get_selected()
+        target_path, drop_position = treeview.get_dest_row_at_pos(x, y)
+        # only move if source is a feed and target is a category
+        # move here first and let our engine know later
+    
     def __get_weight(self, count):
         if count and int(count) > 0:
             return 800

@@ -3,7 +3,7 @@
 #
 #       feedengine.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ import re
 import dbus
 import dbus.service
 import dbus.mainloop.glib
+from xml.etree import ElementTree
 
 
 class FeedEngine (dbus.service.Object):
@@ -62,6 +63,22 @@ class FeedEngine (dbus.service.Object):
             elif item['type'] == 'category':
                 self.__edit_category(item)
     
+    @dbus.service.method('org.naufrago.feedengine')
+    def import_opml(self, filename):
+        print "importing ", filename
+        f = open(os.path.abspath(filename), 'r')
+        tree = ElementTree.parse(f)
+        current_category = '1'
+        cursor = self.conn.cursor()
+        for node in tree.getiterator('outline'):
+            name = node.attrib.get('text').replace('[','(').replace(']',')')
+            url = node.attrib.get('xmlUrl')
+            if url: # isolate feed
+                self.add_feed({'url':url, 'category':current_category})
+            else: # category
+                if len(node) is not 0:
+                    self.add_category({'name':name})
+                    current_category = self.__get_category(name)['id']
 
     @dbus.service.method('org.naufrago.feedengine',
                             in_signature='', out_signature='aa{ss}')
@@ -86,6 +103,8 @@ class FeedEngine (dbus.service.Object):
                 feed['title'] = f.feed.title.encode('utf-8')
             else:
                 feed['title'] = feed['url'].encode('utf-8')
+            if not feed.has_key('category'):
+                feed['category'] = 1
             rfeed = self.__add_feed(feed)
             # update feed while we're at it
             count = self.__update_feed(rfeed, f)
@@ -132,7 +151,8 @@ class FeedEngine (dbus.service.Object):
             if item['type'] == 'starred':
                 return self.__get_starred_articles()
                 
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}')
+    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}',
+                        out_signature='(a{ss}as)')
     def get_article(self, item):
         article = self.__get_article(item['id'])
         # check policy first
@@ -169,12 +189,15 @@ class FeedEngine (dbus.service.Object):
         self.favicon_path = os.path.abspath(os.path.join(base_path, 'favicons'))
         self.images_path = os.path.abspath(os.path.join(base_path, 'images'))
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        # check
+        try:
+            self.get_categories()
+        except:
+            self.__create_database()
         self.max_entries = 10;
         # d-bus
         bus_name = dbus.service.BusName('org.naufrago.feedengine', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/org/naufrago/feedengine')
-        if first_run:
-            self.__create_database()
     
     def __toggle_article(self, col, item):
         # get original state
@@ -313,7 +336,9 @@ class FeedEngine (dbus.service.Object):
 
     def __add_category(self, category):
         cursor = self.conn.cursor()
-        cursor.execute('INSERT INTO categories VALUES(null, ?)', [category['name']])
+        q = 'INSERT INTO categories VALUES(null, "{0}")'.format(category['name'])
+        print q
+        cursor.execute(q)
         self.conn.commit()
         cursor.close()
         return self.__get_category(category['name'])
@@ -321,7 +346,7 @@ class FeedEngine (dbus.service.Object):
     def __add_feed(self, feed):
         id = hashlib.md5(feed['url']).hexdigest().encode("utf-8")
         #~ q = 'INSERT INTO feeds VALUES(?, ?, ?, ?)', [id.decode('utf-8'), feed['title'],feed['url'], 1]
-        q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}")'.format(id, feed['title'], feed['url'], 1)
+        q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}")'.format(id, feed['title'], feed['url'], feed['category'])
         print q
         cursor = self.conn.cursor()
         cursor.execute(q)
@@ -420,14 +445,18 @@ class FeedEngine (dbus.service.Object):
                 }
 
     def __swap_image_tags(self, article):
+        links = []
         cursor = self.conn.cursor()
         cursor.execute('SELECT name,url FROM images WHERE article_id = ?', [article['id']])
         row = cursor.fetchall()
         if (row is not None) and (len(row)>0):
             for img in row:
+                t = 'file://' + os.path.join(self.images_path, str(img[0]))
+                print t
                 article['content'] = article['content'].replace(
-                        img[1], os.path.join(self.images_path, str(img[0])))
-        return article
+                        img[1], t)
+                links.append(t)
+            return article, links
 
     def __make_articles_list(self, q):
         """Convenience function."""
@@ -493,7 +522,7 @@ class FeedEngine (dbus.service.Object):
             else: title = 'Without title'
         else: title = 'Without title'
 
-        content = ''        
+        content = 'No content'        
         if hasattr(feed_item,'content'):
             try:
                 content = feed_item.content[0].get('value').encode("utf-8")

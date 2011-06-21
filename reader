@@ -9,17 +9,21 @@ indent_mode=2
 [project]
 name=RSS
 base_path=/home/b_sodonon/projects/python/naufrago
+description=
 
 [long line marker]
 long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=5
-FILE_NAME_0=18355;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedengine.py;0;4
-FILE_NAME_1=130764;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago.py;0;4
-FILE_NAME_2=170;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/client.py;0;4
-FILE_NAME_3=9168;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedtree.py;0;4
-FILE_NAME_4=13012;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/itemlist.py;0;4
-FILE_NAME_5=1162;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/reader.py;0;4
-FILE_NAME_6=0;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedview.py;0;4
+current_page=7
+FILE_NAME_0=1738;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago.py;0;4
+FILE_NAME_1=3916;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedengine.py;0;4
+FILE_NAME_2=2867;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedtree.py;0;4
+FILE_NAME_3=2065;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedview.py;0;4
+FILE_NAME_4=63;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/status.py;0;4
+FILE_NAME_5=11703;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/reader.py;0;4
+FILE_NAME_6=2075;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/itemlist.py;0;4
+FILE_NAME_7=954;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/client.py;0;4
+FILE_NAME_8=3295;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/gtkui/frame.py;0;4
+FILE_NAME_9=5065;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/gtkui/simplelayout.py;0;4

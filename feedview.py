@@ -3,7 +3,7 @@
 #
 #       feedview.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -21,10 +21,13 @@
 #       MA 02110-1301, USA.
 #       
 #       
+#TODO: Integrate webkit.
+
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import GObject
+from gi.repository import WebKit
 #~ import webkit
 
 class FeedView (Gtk.VBox, GObject.GObject):
@@ -42,6 +45,11 @@ class FeedView (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_FIRST, 
             None,
             (GObject.TYPE_STRING,)),
+        
+        "link-hovered" : (
+            GObject.SignalFlags.RUN_FIRST, 
+            None,
+            (GObject.TYPE_STRING,)),
         }
 
     def __init__(self):
@@ -50,16 +58,14 @@ class FeedView (Gtk.VBox, GObject.GObject):
         # top navi
         tbox = Gtk.HBox(spacing=3)
         # navigation buttons
-        self.link_button = Gtk.LinkButton('', label='Space holder')
+        self.link_button = Gtk.LinkButton('', label='Article Title')
         tbox.pack_start(self.link_button, True, True,0)
         # webkit view
-        #~ self.feedview = webkit.WebView()
-        self.feedview = Gtk.Label()
-        self.feedview.set_line_wrap(True)
-        self.feedview.set_ellipsize(Pango.EllipsizeMode.END)
-        #~ self.feedview.set_full_content_zoom(True)
-        #~ self.webview.connect("navigation-policy-decision-requested", self.navigation_requested)
-        #~ self.webview.connect("hovering-over-link", self.__hover_link)
+        self.feedview = WebKit.WebView()
+        self.feedview.set_full_content_zoom(True)
+        self.link_button.connect('clicked', self.__header_click)
+        self.feedview.connect("navigation-policy-decision-requested", self.__override_clicks)
+        self.feedview.connect("hovering-over-link", self.__hover_link)
 
         # containers
         tal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
@@ -67,23 +73,43 @@ class FeedView (Gtk.VBox, GObject.GObject):
         msc = Gtk.ScrolledWindow()
         msc.set_shadow_type(Gtk.ShadowType.IN)
         msc.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        #~ msc.add(self.feedview)
+        msc.add(self.feedview)
         mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         mal.add(msc)
         self.pack_start(tal, False, False,0)
-        #~ self.pack_start(mal, True, True,0)
-        self.pack_start(self.feedview, True, True,0)
+        self.pack_start(mal, True, True,0)
         GObject.type_register(FeedView)
+        self.valid_links = None
 
-    def show_article(self, art):
+    def show_article(self, art_tuple):
+        art, links = art_tuple
+        self.valid_links = links
+        self.valid_links.append("valid")
         self.link_button.set_label(art['title'])
         self.link_button.set_uri(art['link'])
-        self.feedview.set_text(art['content'])
+        self.feedview.load_string(art['content'], "text/html", "utf-8", "valid")
         self.emit('article-loaded')
     
-    def __hover_link(self, *args):
+    def __hover_link(self, caller, alt, url):
+        if url:
+            self.emit('link-hovered', url)
+
+    def __override_clicks(self, frame, request, navigation_action, policy_decision, data=None):
+        uri = navigation_action.get_uri()
+        if uri in self.valid_links:
+            return 0 # Let browse
+        else:
+            self.emit('link-clicked', uri)
+            return 1 # Don't let browse
+    
+    def __header_click(self, *args):
         print args
 
+    #~ def do_link_hovered(self, url):
+        #~ print "Hovered: ", url
+    #~ def do_link_clicked(self, url):
+        #~ print "clicked: ", url
+         
 if __name__ == '__main__':
     def convert(item, tp='feed'):
         i = {
@@ -132,4 +158,3 @@ if __name__ == '__main__':
     window.show_all()
     view.show_article(art)
     Gtk.main()
-

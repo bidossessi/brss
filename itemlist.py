@@ -3,7 +3,7 @@
 #
 #       itemlist.py
 #       
-#       Copyright 2011 Bidossessi Sodonon <b_sodonon@sysadmin.colourball.com>
+#       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -59,9 +59,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.current_item = None
         ## search
         self.filterentry = Gtk.Entry()
-        self.filterentry.set_property("primary-icon-stock", "gtk-find")
-        self.filterentry.set_property("primary-icon-activatable", True)
-        self.filterentry.set_property("secondary-icon-stock", "gtk-clear")
+        self.filterentry.set_property("secondary-icon-stock", "gtk-find")
         self.filterentry.set_property("secondary-icon-activatable", True)
         self.filterentry.set_property("secondary-icon-tooltip-text", "Vider le champ de recherche")
         self.fbox = Gtk.HBox(spacing=3)
