@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       feedengine.py
+#       engine.py
 #       
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
@@ -51,11 +51,11 @@ def make_time(string=False):
 def make_uuid(data="fast random string"):
     return hashlib.md5(str(make_time())+str(data)).hexdigest().encode("utf-8")
 
-class FeedEngine (dbus.service.Object):
+class Engine (dbus.service.Object):
     """ The feedengine handles web and database calls."""
     
     ## PUBLIC METHODS
-    @dbus.service.method('org.naufrago.feedengine',
+    @dbus.service.method('org.itgears.brss',
                          in_signature='a{ss}')
     def add_category(self, category):
         try:
@@ -66,7 +66,7 @@ class FeedEngine (dbus.service.Object):
         except AssertionError:
             self.warning("error", 'Category already exists!')
 
-    @dbus.service.method('org.naufrago.feedengine',
+    @dbus.service.method('org.itgears.brss',
                          in_signature='a{ss}')
     def edit(self, item):
         if item and item.has_key('type'):
@@ -75,7 +75,7 @@ class FeedEngine (dbus.service.Object):
             elif item['type'] == 'category':
                 self.__edit_category(item)
     
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss')
     def import_opml(self, filename):
         f = open(os.path.abspath(filename), 'r')
         tree = ElementTree.parse(f)
@@ -92,20 +92,20 @@ class FeedEngine (dbus.service.Object):
                     current_category = self.__get_category(name)['id']
         self.notice('added', 'Feeds imported!')
     
-    @dbus.service.method('org.naufrago.feedengine',
+    @dbus.service.method('org.itgears.brss',
                             in_signature='', out_signature='aa{ss}')
     def get_categories(self):
         cat = self.__get_all_categories()
         return cat
         
-    @dbus.service.method('org.naufrago.feedengine',
+    @dbus.service.method('org.itgears.brss',
                             in_signature='a{ss}', out_signature='aa{ss}')
     def get_feeds_for(self, category):
         
         feeds = self.__get_feeds_for(category['id'])
         return feeds
 
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}')
+    @dbus.service.method('org.itgears.brss', in_signature='a{ss}')
     def add_feed(self, feed):
         try:
             assert self.__feed_exists(feed['url']) == False
@@ -121,13 +121,26 @@ class FeedEngine (dbus.service.Object):
             self.notice('added', "New feed added: {0}".format(feed['title']))
             # update feed while we're at it
             count = self.__update_feed(rfeed, f)
-            self.notice('new', str(count))
             
         except AssertionError:
             self.warning("error", 'Feed already exists!')
     
     
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss', out_signature='aa{ss}')
+    def search_for(self, string):
+        q = 'SELECT id,read,starred,title,date,link,feed_id FROM articles WHERE title LIKE "%{0}%" OR content LIKE "%{0}%" AND ghost=0'.format(string)
+        try:
+            arts = self.__make_articles_list(q)
+            if len(arts) > 0:
+                self.notice('new', 'Found {0} articles matching "{1}"'.format(len(arts), string))
+            else:    
+                self.notice('warning', 'Couldn\'t find any article matching "{0}"'.format(string))
+            return arts
+        except Exception, e:
+            self.warning('warning', 'Search for "{0}" failed!'.format(string))
+            raise e
+
+    @dbus.service.method('org.itgears.brss')
     def update(self, item=None):
         gmap = {False:0}
         if item == 'all': 
@@ -146,7 +159,7 @@ class FeedEngine (dbus.service.Object):
         else:
             self.notice('new', "Nothing to update")
     
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss')
     def delete(self, item=None):
         if not item:
             return
@@ -156,12 +169,12 @@ class FeedEngine (dbus.service.Object):
                 self.__delete_feed(feed)
             elif item['type'] == 'category':
                 self.__delete_category(item)
-            self.notice('new', "[{0}] {1} deleted!)".format(
+            self.notice('warning', "[{0}] {1} deleted!".format(
                         item['type'].capitalize(), item['name'].encode('utf-8')))
         else:
             self.notice('new', "Nothing to do")
         
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}', 
+    @dbus.service.method('org.itgears.brss', in_signature='a{ss}', 
                         out_signature='aa{ss}')
     def get_articles_for(self, item):
         if item and item.has_key('type'):
@@ -182,40 +195,38 @@ class FeedEngine (dbus.service.Object):
             if item['type'] == 'starred':
                 return self.__get_starred_articles()
                 
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}',
+    @dbus.service.method('org.itgears.brss', in_signature='a{ss}',
                         out_signature='(a{ss}as)')
     def get_article(self, item):
         article = self.__get_article(item['id'])
         # check policy first
         return self.__swap_image_tags(article)
     
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}')
+    @dbus.service.method('org.itgears.brss', in_signature='a{ss}')
     def toggle_starred(self, item):
         self.__toggle_article('starred', item)
-    @dbus.service.method('org.naufrago.feedengine', in_signature='a{ss}')
+    @dbus.service.method('org.itgears.brss', in_signature='a{ss}')
     def toggle_read(self, item):
         self.__toggle_article('read', item)
     
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss')
     def count_unread(self):
         return self.__count_unread_items()
     
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss')
     def count_starred(self):
         return self.__count_starred_items()
     
-    @dbus.service.signal('org.naufrago.feedengine', signature='ss')
+    @dbus.service.signal('org.itgears.brss', signature='ss')
     def warning (self, wtype, message):
         print '{0}: {1}'.format(wtype, message)
     
-    @dbus.service.signal('org.naufrago.feedengine', signature='ss')
+    @dbus.service.signal('org.itgears.brss', signature='ss')
     def notice (self, wtype, message):
         print '{0}: {1}'.format(wtype, str(message))
     
     ## INTERNAL METHODS
-    def __init__(self, base_path, first_run=False):
-        if not base_path:
-            return False
+    def __init__(self, base_path="."):
         self.db_path = os.path.abspath(os.path.join(base_path, 'feed.db'))
         self.favicon_path = os.path.abspath(os.path.join(base_path, 'favicons'))
         self.images_path = os.path.abspath(os.path.join(base_path, 'images'))
@@ -227,8 +238,8 @@ class FeedEngine (dbus.service.Object):
             self.__create_database()
         self.max_entries = 10;
         # d-bus
-        bus_name = dbus.service.BusName('org.naufrago.feedengine', bus=dbus.SessionBus())
-        dbus.service.Object.__init__(self, bus_name, '/org/naufrago/feedengine')
+        bus_name = dbus.service.BusName('org.itgears.brss', bus=dbus.SessionBus())
+        dbus.service.Object.__init__(self, bus_name, '/org/itgears/brss/Engine')
     
     def __toggle_article(self, col, item):
         # get original state
@@ -304,8 +315,9 @@ class FeedEngine (dbus.service.Object):
     
     def __delete_feed(self, feed):
         articles = self.get_articles_for(feed)
-        for a in articles:
-            self.__delete_article(a)
+        if articles:
+            for a in articles:
+                self.__delete_article(a)
         # now delete
         q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
         cursor = self.conn.cursor()        
@@ -316,11 +328,27 @@ class FeedEngine (dbus.service.Object):
     def __delete_article(self, art):
         # delete images first.
         cursor = self.conn.cursor()
-        cursor.execute('SELECT name,url FROM images WHERE article_id = ?', [article['id']])
-        row = cursor.fetchall()
+        cursor.execute('SELECT name FROM images WHERE article_id = ?', [article['id']])
+        rows = cursor.fetchall()
+        if (rows is not None) and (len(rows)>0):
+            for i in rows:
+                filename = os.path.abspath(os.path.join(self.images_path,i[0]))
+                print "Deleting ", filename
+                try:
+                    os.unlink(filename)
+                except: pass #already gone?
+        # now remove image entries in DB
+        cursor.execute('DELETE FROM images WHERE article_id = ?', [article['id']])
+        self.conn.commit()
+        # now delete article
+        cursor.execute('DELETE FROM articles WHERE id = ?', [article['id']])
+        self.conn.commit()
+        cursor.close()
+            
     def __clean_up_feed(self, feed):
         pass
-
+            
+    
     def __count_unread_items(self, feed=None):
         if feed:
             q = 'SELECT COUNT(id) FROM articles WHERE feed_id = "{0}" AND read = 0'.format(feed['id'])
@@ -508,6 +536,7 @@ class FeedEngine (dbus.service.Object):
             return article, links
         else:
             return article, ['valid']
+    
     def __make_articles_list(self, q):
         """Convenience function."""
         articles = []
@@ -644,18 +673,17 @@ class FeedEngine (dbus.service.Object):
     def run(self):
         Gtk.main()
 
-    @dbus.service.method('org.naufrago.feedengine')
+    @dbus.service.method('org.itgears.brss')
     def exit(self):
         """Clean up and leave"""
         self.__clean_up()
         Gtk.main_quit()
         return "Quitting"
-
-
+    
 if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     session_bus = dbus.SessionBus()
     # initiate engine
-    #~ engine = FeedEngine(".", True)
-    engine = FeedEngine(base_path=".")
+    #~ engine = Engine(".", True)
+    engine = Engine(base_path=".")
     engine.run()

@@ -32,8 +32,8 @@ import os
 import webbrowser
 # our stuff
 from itemlist   import ItemList
-from feedtree   import FeedTree
-from feedview   import FeedView
+from tree       import Tree
+from view       import View
 from status     import Status
 
 class Reader (Gtk.Window, GObject.GObject):
@@ -71,10 +71,10 @@ class Reader (Gtk.Window, GObject.GObject):
             self.quit()
             
         # ui elements
-        self.tree = FeedTree()
+        self.tree = Tree()
         self.ilist = ItemList()
         self.ilist.set_property("height-request", 250)
-        self.view = FeedView()
+        self.view = View()
         self.status = Status()
         # layout
         self.__layout_ui()
@@ -87,21 +87,24 @@ class Reader (Gtk.Window, GObject.GObject):
         # dbus
         bus                 = dbus.SessionBus()
         try:
-            self.engine              = bus.get_object('org.naufrago.feedengine', '/org/naufrago/feedengine')
+            self.engine              = bus.get_object('org.itgears.brss', '/org/itgears/brss/Engine')
+            self.tray                = bus.get_object('org.itgears.brss', '/org/itgears/brss/Tray')
         except:
             self.quit()
-        self.add_category        = self.engine.get_dbus_method('add_category', 'org.naufrago.feedengine')
-        self.get_categories      = self.engine.get_dbus_method('get_categories', 'org.naufrago.feedengine')
-        self.get_feeds_for       = self.engine.get_dbus_method('get_feeds_for', 'org.naufrago.feedengine')
-        self.add_feed            = self.engine.get_dbus_method('add_feed', 'org.naufrago.feedengine')
-        self.get_articles_for    = self.engine.get_dbus_method('get_articles_for', 'org.naufrago.feedengine')
-        self.update              = self.engine.get_dbus_method('update', 'org.naufrago.feedengine')
-        self.get_article         = self.engine.get_dbus_method('get_article', 'org.naufrago.feedengine')
-        self.toggle_starred      = self.engine.get_dbus_method('toggle_starred', 'org.naufrago.feedengine')
-        self.toggle_read         = self.engine.get_dbus_method('toggle_read', 'org.naufrago.feedengine')
-        self.count_unread        = self.engine.get_dbus_method('count_unread', 'org.naufrago.feedengine')
-        self.count_starred       = self.engine.get_dbus_method('count_starred', 'org.naufrago.feedengine')
-        self.import_opml         = self.engine.get_dbus_method('import_opml', 'org.naufrago.feedengine')
+        self.add_category        = self.engine.get_dbus_method('add_category', 'org.itgears.brss')
+        self.get_categories      = self.engine.get_dbus_method('get_categories', 'org.itgears.brss')
+        self.get_feeds_for       = self.engine.get_dbus_method('get_feeds_for', 'org.itgears.brss')
+        self.add_feed            = self.engine.get_dbus_method('add_feed', 'org.itgears.brss')
+        self.get_articles_for    = self.engine.get_dbus_method('get_articles_for', 'org.itgears.brss')
+        self.search_for          = self.engine.get_dbus_method('search_for', 'org.itgears.brss')
+        self.update              = self.engine.get_dbus_method('update', 'org.itgears.brss')
+        self.delete              = self.engine.get_dbus_method('delete', 'org.itgears.brss')
+        self.get_article         = self.engine.get_dbus_method('get_article', 'org.itgears.brss')
+        self.toggle_starred      = self.engine.get_dbus_method('toggle_starred', 'org.itgears.brss')
+        self.toggle_read         = self.engine.get_dbus_method('toggle_read', 'org.itgears.brss')
+        self.count_unread        = self.engine.get_dbus_method('count_unread', 'org.itgears.brss')
+        self.count_starred       = self.engine.get_dbus_method('count_starred', 'org.itgears.brss')
+        self.import_opml         = self.engine.get_dbus_method('import_opml', 'org.itgears.brss')
         
     def __create__menu(self):
         ui_string = """<ui>
@@ -109,8 +112,7 @@ class Reader (Gtk.Window, GObject.GObject):
                     <menu action='FeedMenu'>
                      <menuitem action='New feed'/>
                      <menuitem action='New category'/>
-                     <menuitem action='Delete feed'/>
-                     <menuitem action='Delete category'/>
+                     <menuitem action='Delete'/>
                      <separator/>
                      <menuitem action='Import feeds'/>
                      <menuitem action='Export feeds'/>
@@ -158,8 +160,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Adds a feed'),
                 ('New category', "gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
-                ('Delete feed', "gtk-clear", 'Delete feed', None, 'Deletes a feed'),
-                ('Delete category', "gtk-cancel", 'Delete category', None, 'Deletes a category'),
+                ('Delete', "gtk-clear", 'Delete', None, 'Deletes a feed or a category'),
                 ('Import feeds', "gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.import_feeds),
                 ('Export feeds', "gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
@@ -177,7 +178,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('About', "gtk-about", '_About', None, 'About'),
                 ]
         tactions = [
-                ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__search),
+                ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__toggle_search),
                 ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
                 ]
 
@@ -226,6 +227,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect_after('star-toggled', self.tree.update_starred)
         self.ilist.connect_after('read-toggled', self.tree.update_unread)
         self.ilist.connect('dcall-request', self.__handle_dcall)
+        self.ilist.connect('search-requested', self.__search_articles)
+        self.ilist.connect('search-requested', self.tree.deselect)
         self.view.connect('article-loaded', self.ilist.mark_read)
         self.view.connect('link-clicked', self.__to_browser)
         self.engine.connect_to_signal('notice', self.status.message)
@@ -262,6 +265,7 @@ class Reader (Gtk.Window, GObject.GObject):
 
         if response == Gtk.ResponseType.OK:
             dialog.hide()
+            self.status.message("wait", "Importing Feeds")
             self.import_opml(filename, 
                 reply_handler=self.__populate_menu,
                 error_handler=self.__to_log)
@@ -292,14 +296,12 @@ class Reader (Gtk.Window, GObject.GObject):
         self.get_article(item, 
                 reply_handler=self.view.show_article,
                 error_handler=self.__to_log)
-
     def __delete_item(self, tree, item):
         self.delete_item(item,
                 reply_handler=self.__populate_menu,
                 error_handler=self.__to_log)
-
     def __handle_dcall(self, caller, name, item):
-        #~ print "{0}: {1}".format(name, item)
+        print "{0}: {1}".format(name, item)
         if name in ['Update', 'Update all']:
             if item == 'all':
                 self.status.message("wait", "Updating all Feeds")
@@ -317,16 +319,22 @@ class Reader (Gtk.Window, GObject.GObject):
         
         elif name in ['Copy Url to Clipboard']:
             self.__to_clipboard(item['url'])
-    
+        
+        elif name in ['Delete', 'Delete Feed', 'Delete Category']:
+            self.delete(item,
+                reply_handler=self.__populate_menu,
+                error_handler=self.__to_log)
+    def __search_articles(self, caller, string):
+        self.search_for(string,
+                reply_handler=self.ilist.load_list,
+                error_handler=self.__to_log)
     def __toggle_stop(self):
         gmap = {True:False, False: True}
         widget = self.ui.get_widget('/Toolbar/Stop')
         widget.set_sensitive(
             gmap.get(widget.get_sensitive()))
-    
-    def __search(self, *args):
+    def __toggle_search(self, *args):
         self.emit('search-toggled')
-    
     def __update_done(self, *args):
         self.__toggle_stop()
         

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       feedview.py
+#       view.py
 #       
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
@@ -28,9 +28,14 @@ from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import GObject
 from gi.repository import WebKit
-#~ import webkit
+from datetime import datetime
+import locale
 
-class FeedView (Gtk.VBox, GObject.GObject):
+def make_date(string):
+    date = datetime.fromtimestamp(int(string))
+    return date.strftime (locale.nl_langinfo(locale.D_FMT))
+    
+class View (Gtk.VBox, GObject.GObject):
     """
         The feedview displays the currently selected feed item.
         It redirects clicks to the user's preferred browser and
@@ -78,14 +83,15 @@ class FeedView (Gtk.VBox, GObject.GObject):
         mal.add(msc)
         self.pack_start(tal, False, False,0)
         self.pack_start(mal, True, True,0)
-        GObject.type_register(FeedView)
+        GObject.type_register(View)
         self.valid_links = None
 
     def show_article(self, art_tuple):
         art, links = art_tuple
         self.valid_links = links
         self.valid_links.append("valid")
-        self.link_button.set_label(art['title'])
+        self.link_button.set_label("[{0}] - {1}".format(
+                make_date(art['date']),art['title'].encode('utf-8')))
         self.link_button.set_uri(art['link'])
         self.feedview.load_string(art['content'], "text/html", "utf-8", "valid")
         self.emit('article-loaded')
@@ -135,12 +141,12 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     bus                 = dbus.SessionBus()
-    engine              = bus.get_object('org.naufrago.feedengine', '/org/naufrago/feedengine')
-    get_categories      = engine.get_dbus_method('get_categories', 'org.naufrago.feedengine')
-    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.naufrago.feedengine')
-    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.naufrago.feedengine')
-    get_article         = engine.get_dbus_method('get_article', 'org.naufrago.feedengine')
-    exit                = engine.get_dbus_method('exit', 'org.naufrago.feedengine')
+    engine              = bus.get_object('org.itgears.brss', '/org/itgears/brss/Engine')
+    get_categories      = engine.get_dbus_method('get_categories', 'org.itgears.brss')
+    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.itgears.brss')
+    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.itgears.brss')
+    get_article         = engine.get_dbus_method('get_article', 'org.itgears.brss')
+    exit                = engine.get_dbus_method('exit', 'org.itgears.brss')
 
     cats = get_categories()
     for c in cats:
@@ -153,7 +159,7 @@ if __name__ == '__main__':
     window = Gtk.Window()
     window.connect("destroy", Gtk.main_quit)
     window.set_default_size(1200, 400)
-    view = FeedView()
+    view = View()
     window.add(view)
     window.show_all()
     view.show_article(art)

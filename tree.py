@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       feedtree.py
+#       Tree.py
 #       
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
@@ -27,8 +27,8 @@ from gi.repository import Gdk
 from gi.repository import GObject
 import os
 
-class FeedTree (Gtk.VBox, GObject.GObject):
-    """ The feedtree handles feeds and categories management. """
+class Tree (Gtk.VBox, GObject.GObject):
+    """ The Tree handles feeds and categories management. """
     
     __gsignals__ = {
         "list-loaded" : (
@@ -52,7 +52,7 @@ class FeedTree (Gtk.VBox, GObject.GObject):
     def __init__(self):
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
-        GObject.type_register(FeedTree)
+        GObject.type_register(Tree)
         self.menuview = Gtk.TreeView()
         self.menuview.set_headers_visible(False)
         self.menucol = Gtk.TreeViewColumn()
@@ -71,7 +71,7 @@ class FeedTree (Gtk.VBox, GObject.GObject):
         msc.add(self.menuview)
         mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         self.pack_start(msc, True, True,0)
-        menu = FeedTreeMenu(self)
+        menu = TreeMenu(self)
         self.current_item = None
         #~ self.__setup_dnd() #FIXME: DnD is broken
         self.__setup_icons()
@@ -82,6 +82,14 @@ class FeedTree (Gtk.VBox, GObject.GObject):
         self.menuview.connect("row-activated", self.__row_activated)
         
     def __setup_icons(self):
+        factory = Gtk.IconFactory()
+        s = Gtk.IconSource()
+        s.set_filename(os.path.abspath('logo2.png'))
+        iconset = Gtk.IconSet()
+        iconset.add_source(s)
+        factory.add('logo', iconset)
+        factory.add_default()
+        
         factory = Gtk.IconFactory()
         s = Gtk.IconSource()
         s.set_filename(os.path.abspath('rss.png'))
@@ -159,6 +167,9 @@ class FeedTree (Gtk.VBox, GObject.GObject):
             gmap.get(tp)
             )
         return r
+        
+    def deselect(self, *args):
+        self.menuselect.unselect_all()
         
     def update_starred(self, ilist, item):
         # if item['starred'] is 0, we go minus
@@ -291,9 +302,9 @@ class FeedTree (Gtk.VBox, GObject.GObject):
         model, iter = self.__search(0, 'unread')
         self.menuselect.select_iter(iter)
         
-class FeedTreeMenu(Gtk.Menu):
+class TreeMenu(Gtk.Menu):
     """
-    FeedTreeMenu extends the standard Gtk.Menu by adding methods 
+    TreeMenu extends the standard Gtk.Menu by adding methods 
     for context handling.
     """
     def __init__(self, treeview):
@@ -379,13 +390,13 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     bus                 = dbus.SessionBus()
-    engine              = bus.get_object('org.naufrago.feedengine', '/org/naufrago/feedengine')
-    add_category        = engine.get_dbus_method('add_category', 'org.naufrago.feedengine')
-    get_categories      = engine.get_dbus_method('get_categories', 'org.naufrago.feedengine')
-    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.naufrago.feedengine')
-    add_feed            = engine.get_dbus_method('add_feed', 'org.naufrago.feedengine')
-    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.naufrago.feedengine')
-    exit                = engine.get_dbus_method('exit', 'org.naufrago.feedengine')
+    engine              = bus.get_object('org.itgears.brss', '/org/itgears/brss/Engine')
+    add_category        = engine.get_dbus_method('add_category', 'org.itgears.brss')
+    get_categories      = engine.get_dbus_method('get_categories', 'org.itgears.brss')
+    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.itgears.brss')
+    add_feed            = engine.get_dbus_method('add_feed', 'org.itgears.brss')
+    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.itgears.brss')
+    exit                = engine.get_dbus_method('exit', 'org.itgears.brss')
 
     cats = get_categories()
     for c in cats:
@@ -395,7 +406,7 @@ if __name__ == '__main__':
     window = Gtk.Window()
     window.connect("destroy", Gtk.main_quit)
     window.set_default_size(400, 600)
-    tree = FeedTree()
+    tree = Tree()
     window.add(tree)
     window.show_all()
     tree.fill_menu(cats)

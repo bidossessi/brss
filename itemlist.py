@@ -24,6 +24,12 @@
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
+from datetime import datetime
+import locale
+
+def make_date(string):
+    date = datetime.fromtimestamp(int(string))
+    return date.strftime (locale.nl_langinfo(locale.D_FMT))
 
 class ItemList (Gtk.VBox, GObject.GObject):
     """
@@ -35,6 +41,10 @@ class ItemList (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_LAST, 
             None,
             ()),
+        "search-requested" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            (GObject.TYPE_STRING,)),
         "star-toggled" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
@@ -61,7 +71,9 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.filterentry = Gtk.Entry()
         self.filterentry.set_property("secondary-icon-stock", "gtk-find")
         self.filterentry.set_property("secondary-icon-activatable", True)
-        self.filterentry.set_property("secondary-icon-tooltip-text", "Vider le champ de recherche")
+        self.filterentry.set_property("secondary-icon-tooltip-text", "Search for...")
+        self.filterentry.connect("icon-press", self.__icon_pressed)
+        self.filterentry.connect("activate", self.__search_request)
         self.fbox = Gtk.HBox(spacing=3)
         self.fbox.pack_start(self.filterentry, True, True, 0)
         store = Gtk.ListStore(str, bool, bool, str, str, str, int, str)
@@ -104,6 +116,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         column.set_resizable(True)
         cell = Gtk.CellRendererText()
         column.pack_start(cell, True)
+        column.set_cell_data_func(cell, self.__format_date)
         column.add_attribute(cell, "text", 3)
         column.add_attribute(cell, "weight", 6)
         column.set_sort_column_id(3)
@@ -151,7 +164,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
             return date.strftime (locale.nl_langinfo(locale.D_FMT))
         except Exception, e:
             return ""   
-    
+    def __format_date(self, column, cell, model, iter, col):
+        cell.set_property('text', make_date(model.get_value(iter, 3)))
     def __format_data(self, data):
         """ Structure our data """
         llist = []
@@ -165,7 +179,6 @@ class ItemList (Gtk.VBox, GObject.GObject):
                 int(a['read']),
                 int(a['starred']),
                 a['date'],
-                #~ self.__get_date(a['date']),
                 a['title'],
                 a['link'],
                 self.__get_weight(a['read']),
@@ -173,9 +186,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
             )
         return r
         
-    def load_list(self, data, append=False):
-        """Load the given data into the left menuStore"""
-        # return the first iter
+    def load_list(self, data):
         store = self.listview.get_model()
         store.clear()
         # store structure (id, read, starred, date, title, url, weight, feed_id)
@@ -203,11 +214,29 @@ class ItemList (Gtk.VBox, GObject.GObject):
     def __show_search(self):
         self.fbox.show()
         self.filterentry.show()
+        self.filterentry.grab_focus()
         self.search_on = True
     
     def __hide_search(self):
         self.fbox.hide()
+        self.__clear_filter()
         self.search_on = False
+    
+    def __icon_pressed(self, entry, icon_pos, event):
+        """Clears the standard filter GtkEntry."""
+        if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":
+            if event.button == 1:
+                self.__clear_filter()
+        if icon_pos.value_name == "GTK_ENTRY_ICON_SECONDARY":
+            if event.button == 3 or event.button == 1:
+                self.__request_search(entry)
+    
+    def __search_request(self, entry, *args):
+        self.emit('search-requested', entry.get_text())
+        self.__clear_filter()
+        
+    def __clear_filter(self):
+        self.filterentry.set_text("")
         
     def next_item(self, *args):
         model, iter = self.listselect.get_selected()
@@ -301,6 +330,9 @@ class ItemList (Gtk.VBox, GObject.GObject):
         #~ print "Star this: ", item
     #~ def do_read_toggled(self, item):
         #~ print "Toggle this: ", item
+    def do_search_requested(self, item):
+        print "Search for: ", item
+    
     def do_list_loaded(self):
         self.listselect.select_path((0,))
 
@@ -398,14 +430,14 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     bus                 = dbus.SessionBus()
-    engine              = bus.get_object('org.naufrago.feedengine', '/org/naufrago/feedengine')
-    get_categories      = engine.get_dbus_method('get_categories', 'org.naufrago.feedengine')
-    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.naufrago.feedengine')
-    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.naufrago.feedengine')
-    get_article         = engine.get_dbus_method('get_article', 'org.naufrago.feedengine')
-    toggle_starred      = engine.get_dbus_method('toggle_starred', 'org.naufrago.feedengine')
-    toggle_read         = engine.get_dbus_method('toggle_read', 'org.naufrago.feedengine')
-    exit                = engine.get_dbus_method('exit', 'org.naufrago.feedengine')
+    engine              = bus.get_object('org.itgears.brss', '/org/itgears/brss/Engine')
+    get_categories      = engine.get_dbus_method('get_categories', 'org.itgears.brss')
+    get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'org.itgears.brss')
+    get_articles_for    = engine.get_dbus_method('get_articles_for', 'org.itgears.brss')
+    get_article         = engine.get_dbus_method('get_article', 'org.itgears.brss')
+    toggle_starred      = engine.get_dbus_method('toggle_starred', 'org.itgears.brss')
+    toggle_read         = engine.get_dbus_method('toggle_read', 'org.itgears.brss')
+    exit                = engine.get_dbus_method('exit', 'org.itgears.brss')
 
     cats = get_categories()
     for c in cats:
