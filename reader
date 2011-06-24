@@ -16,14 +16,15 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=7
-FILE_NAME_0=1738;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago.py;0;4
-FILE_NAME_1=3916;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedengine.py;0;4
-FILE_NAME_2=2867;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedtree.py;0;4
-FILE_NAME_3=2065;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/feedview.py;0;4
-FILE_NAME_4=63;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/status.py;0;4
-FILE_NAME_5=11703;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/reader.py;0;4
-FILE_NAME_6=2075;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/itemlist.py;0;4
-FILE_NAME_7=954;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/client.py;0;4
-FILE_NAME_8=3295;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/gtkui/frame.py;0;4
-FILE_NAME_9=5065;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/gtkui/simplelayout.py;0;4
+current_page=2
+FILE_NAME_0=144117;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago.py;0;4
+FILE_NAME_1=12752;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/reader.py;0;4
+FILE_NAME_2=11602;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/engine.py;0;4
+FILE_NAME_3=11897;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/itemlist.py;0;4
+FILE_NAME_4=0;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/status.py;0;4
+FILE_NAME_5=5471;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/tree.py;0;4
+FILE_NAME_6=3975;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/view.py;0;4
+FILE_NAME_7=7362;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/gtkui/frame.py;0;4
+FILE_NAME_8=248;Python;0;16;0;1;0;/home/b_sodonon/projects/python/naufrago/client.py;0;4
+FILE_NAME_9=0;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/utils/functions.py;0;4
+FILE_NAME_10=4702;Python;0;16;0;1;0;/home/b_sodonon/projects/python/coriolis/client/coriolis/client/core/application.py;0;4

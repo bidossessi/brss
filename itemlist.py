@@ -41,6 +41,10 @@ class ItemList (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_LAST, 
             None,
             ()),
+        "no-data" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            ()),
         "search-requested" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
@@ -180,7 +184,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
                 int(a['starred']),
                 a['date'],
                 a['title'],
-                a['link'],
+                a['url'],
                 self.__get_weight(a['read']),
                 a['feed_id'],
             )
@@ -196,7 +200,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
                 store.append(art)
             self.listview.set_model(store)
             self.emit('list-loaded')
-
+        else:
+            self.emit('no-data')
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         

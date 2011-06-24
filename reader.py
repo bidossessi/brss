@@ -49,11 +49,19 @@ class Reader (Gtk.Window, GObject.GObject):
             GObject.SignalFlags.RUN_FIRST, 
             None,
             ()),
-        "next-item" : (
+        "next-article" : (
             GObject.SignalFlags.RUN_FIRST, 
             None,
             ()),            
-        "previous-item" : (
+        "previous-article" : (
+            GObject.SignalFlags.RUN_FIRST, 
+            None,
+            ()),            
+        "next-feed" : (
+            GObject.SignalFlags.RUN_FIRST, 
+            None,
+            ()),            
+        "previous-feed" : (
             GObject.SignalFlags.RUN_FIRST, 
             None,
             ()),            
@@ -92,7 +100,7 @@ class Reader (Gtk.Window, GObject.GObject):
         except:
             self.quit()
         self.add_category        = self.engine.get_dbus_method('add_category', 'org.itgears.brss')
-        self.get_categories      = self.engine.get_dbus_method('get_categories', 'org.itgears.brss')
+        self.get_menu_items      = self.engine.get_dbus_method('get_menu_items', 'org.itgears.brss')
         self.get_feeds_for       = self.engine.get_dbus_method('get_feeds_for', 'org.itgears.brss')
         self.add_feed            = self.engine.get_dbus_method('add_feed', 'org.itgears.brss')
         self.get_articles_for    = self.engine.get_dbus_method('get_articles_for', 'org.itgears.brss')
@@ -216,12 +224,14 @@ class Reader (Gtk.Window, GObject.GObject):
     def __connect_signals(self):    # signals
         self.connect("destroy", self.quit)
         self.connect('loaded', self.__populate_menu)
-        self.connect('next-item', self.ilist.next_item)
-        self.connect('previous-item', self.ilist.previous_item)
+        self.connect('next-article', self.ilist.next_item)
+        self.connect('previous-article', self.ilist.previous_item)
         self.connect('search-toggled', self.ilist.toggle_search)
         self.tree.connect('item-selected', self.__load_articles)
         self.tree.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('item-selected', self.__load_article)
+        self.ilist.connect('item-selected', self.__update_title)
+        self.ilist.connect('no-data', self.view.clear)
         self.ilist.connect('star-toggled', self.__toggle_starred)
         self.ilist.connect('read-toggled', self.__toggle_read)
         self.ilist.connect_after('star-toggled', self.tree.update_starred)
@@ -231,6 +241,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect('search-requested', self.tree.deselect)
         self.view.connect('article-loaded', self.ilist.mark_read)
         self.view.connect('link-clicked', self.__to_browser)
+        self.view.connect('link-hovered', self.__status_info)
         self.engine.connect_to_signal('notice', self.status.message)
         self.engine.connect_to_signal('added', self.__populate_menu)
         self.engine.connect_to_signal('added', self.status.message)
@@ -271,13 +282,10 @@ class Reader (Gtk.Window, GObject.GObject):
                 error_handler=self.__to_log)
     
     def __populate_menu(self, *args):
-        cats = self.get_categories()
-        for c in cats:
-            feeds = self.get_feeds_for(c)
-            c['feeds'] = feeds
+        menu = self.get_menu_items()
         unread = self.count_unread()
         starred = self.count_starred()
-        self.tree.fill_menu(cats, int(unread), int(starred))
+        self.tree.fill_menu(menu, int(unread), int(starred))
         
     def __toggle_starred(self, ilist, item):
         self.toggle_starred(item)
@@ -337,6 +345,11 @@ class Reader (Gtk.Window, GObject.GObject):
         self.emit('search-toggled')
     def __update_done(self, *args):
         self.__toggle_stop()
+    def __update_title(self, caller, item):
+        self.set_title(item['title'])
+    def __status_info(self, caller, message):
+        print message
+        self.status.message('info', message)
         
     def __to_log(self, *args):
         print 'Log: ', args
@@ -349,9 +362,9 @@ class Reader (Gtk.Window, GObject.GObject):
         self.view.link_button.activate()
         
     def __previous(self, *args):
-        self.emit('previous-item')
+        self.emit('previous-article')
     def __next(self, *args):
-        self.emit('next-item')
+        self.emit('next-article')
     
     def __to_clipboard(self, link):
         clipboard = Gtk.Clipboard()

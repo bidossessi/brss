@@ -68,7 +68,6 @@ class View (Gtk.VBox, GObject.GObject):
         # webkit view
         self.feedview = WebKit.WebView()
         self.feedview.set_full_content_zoom(True)
-        self.link_button.connect('clicked', self.__header_click)
         self.feedview.connect("navigation-policy-decision-requested", self.__override_clicks)
         self.feedview.connect("hovering-over-link", self.__hover_link)
 
@@ -84,16 +83,17 @@ class View (Gtk.VBox, GObject.GObject):
         self.pack_start(tal, False, False,0)
         self.pack_start(mal, True, True,0)
         GObject.type_register(View)
-        self.valid_links = None
+        self.valid_links = ['file:']
 
     def show_article(self, art_tuple):
+        self.show()
         art, links = art_tuple
         self.valid_links = links
-        self.valid_links.append("valid")
+        self.valid_links.append("file:")
         self.link_button.set_label("[{0}] - {1}".format(
                 make_date(art['date']),art['title'].encode('utf-8')))
         self.link_button.set_uri(art['link'])
-        self.feedview.load_string(art['content'], "text/html", "utf-8", "valid")
+        self.feedview.load_string(art['content'], "text/html", "utf-8", "file:")
         self.emit('article-loaded')
     
     def __hover_link(self, caller, alt, url):
@@ -108,8 +108,11 @@ class View (Gtk.VBox, GObject.GObject):
             self.emit('link-clicked', uri)
             return 1 # Don't let browse
     
-    def __header_click(self, *args):
-        print args
+    def clear(self, caller):
+        self.link_button.set_label("No Article to show")
+        nd = "<html><h1>No data to show</h1></html>"""
+        self.feedview.load_string(nd, "text/html", "utf-8", "file:")
+        #~ self.hide()
 
     #~ def do_link_hovered(self, url):
         #~ print "Hovered: ", url

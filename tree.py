@@ -49,7 +49,9 @@ class Tree (Gtk.VBox, GObject.GObject):
             (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT,)),
     }
     
-    def __init__(self):
+    def __init__(self, base_path="."):
+        self.favicon_path = os.path.abspath(os.path.join(base_path, 'favicons'))
+        self.images_path = os.path.abspath(os.path.join(base_path, 'images'))
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)
@@ -61,7 +63,8 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menucol.pack_start(self.iconcell, False)
         self.menucol.pack_start(self.textcell, True)
         self.menucol.set_cell_data_func(self.textcell, self.__format_name)
-        self.menucol.set_cell_data_func(self.iconcell, self.__format_icon)
+        #~ self.menucol.set_cell_data_func(self.iconcell, self.__format_icon)
+        self.menucol.add_attribute(self.iconcell, "stock-id", 4)
         self.menuview.append_column(self.menucol)
         self.menuselect = self.menuview.get_selection()
         # containers
@@ -74,55 +77,29 @@ class Tree (Gtk.VBox, GObject.GObject):
         menu = TreeMenu(self)
         self.current_item = None
         #~ self.__setup_dnd() #FIXME: DnD is broken
-        self.__setup_icons()
+        self.__setup_icons(os.path.abspath('rss.png'), 'feed')
+        self.__setup_icons(os.path.abspath('logo2.svg'), 'logo')
+        self.__setup_icons(os.path.abspath('feed-missing.svg'), 'missing')
+        self.__setup_icons(os.path.abspath('starred.svg'), 'starred')
         self.__connect_signals()
         
     def __connect_signals(self):
         self.menuselect.connect("changed", self.__selection_changed)
         self.menuview.connect("row-activated", self.__row_activated)
         
-    def __setup_icons(self):
-        factory = Gtk.IconFactory()
-        s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('logo2.png'))
-        iconset = Gtk.IconSet()
-        iconset.add_source(s)
-        factory.add('logo', iconset)
-        factory.add_default()
+    def __setup_icons(self, path, stock_id):
+        try:
+            assert os.path.exists(path)
+            factory = Gtk.IconFactory()
+            s = Gtk.IconSource()
+            s.set_filename(path)
+            iconset = Gtk.IconSet()
+            iconset.add_source(s)
+            factory.add(stock_id, iconset)
+            factory.add_default()
+            return True
+        except: return False
         
-        factory = Gtk.IconFactory()
-        s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('rss.png'))
-        iconset = Gtk.IconSet()
-        iconset.add_source(s)
-        factory.add('feed', iconset)
-        factory.add_default()
-
-        factory = Gtk.IconFactory()
-        s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('feed-missing.svg'))
-        iconset = Gtk.IconSet()
-        iconset.add_source(s)
-        factory.add('feed-missing', iconset)
-        factory.add_default()
-
-        factory = Gtk.IconFactory()        
-        s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('starred.svg'))
-        iconset = Gtk.IconSet()
-        iconset.add_source(s)
-        factory.add('starred', iconset)
-        factory.add_default()
-
-        factory = Gtk.IconFactory()        
-        s = Gtk.IconSource()
-        s.set_filename(os.path.abspath('star-folder.svg'))
-        iconset = Gtk.IconSet()
-        iconset.add_source(s)
-        factory.add('star-folder', iconset)
-        factory.add_default()
-
-    
     def __setup_dnd(self):
         target_entries = (('example', Gtk.TargetFlags.SAME_WIDGET, 1),)
         # target_entries=[(drag type string, target_flags, application integer ID used for identification purposes)]
@@ -142,11 +119,15 @@ class Tree (Gtk.VBox, GObject.GObject):
         return 400
     
     def __format_icon(self, column, cell, model, iter, col):
+        tp  = model.get_value(iter, 0)
         count = model.get_value(iter, 3)
         if int(count) > 0:
             cell.set_property('stock-id', model.get_value(iter, 4))
         else:
-            cell.set_property('stock-id', 'gtk-apply')
+            if tp == 'feed':
+                cell.set_property('stock-id', 'gtk-apply')
+            elif tp == 'category':
+                cell.set_property('stock-id', 'gtk-directory')
         
     def __format_name(self, column, cell, model, iter, col):
         name = model.get_value(iter, 2)
@@ -157,14 +138,20 @@ class Tree (Gtk.VBox, GObject.GObject):
            cell.set_property("text",name)
         cell.set_property("weight", self.__get_weight(int(count)))
     
-    def __format_row(self, a, tp):
+    def __format_row(self, a):
         gmap = {'feed':'gtk-file', 'category':'gtk-directory'}
+        # icon
+        try:
+            stock = self.__setup_icons(os.path.join(self.favicon_path, a['id']), a['id'])
+            if stock:
+                gmap[a['id']] = a['id']
+        except Exception, e: print e
         r = (
-            tp,
+            a['type'],
             a['id'],
             a['name'],
             int(a.get('count')),
-            gmap.get(tp)
+            gmap.get(a['id']) or gmap.get(a['type'])
             )
         return r
         
@@ -226,43 +213,19 @@ class Tree (Gtk.VBox, GObject.GObject):
         store.append(None, u)
         store.append(None, s)
 
-    def __format_menu(self, data):
-        """
-        structure the received data for our purposes
-        """
-        # store (type, id, name, weight)
-
-        menu = []
-        for cat in data:
-            s = {}
-            cat['count'] = 0
-            # build subitems
-            o = []
-            if cat.has_key('feeds'):
-                for e in cat['feeds']:
-                    cat['count'] += int(e['count'])
-                    o.append(self.__format_row(e, 'feed'))
-            s["feeds"] = o
-            s["category"] = self.__format_row(cat, 'category')
-            menu.append(s)
-        return menu
 
     def fill_menu(self, data, unread, starred):
         """Load the given data into the left menuStore"""
         # return the first iter
         self.menuview.set_model(None)
         store = Gtk.TreeStore(str, str, str, int, str)
-        i = 0
         if data:
-            menu = self.__format_menu(data)
-            for item in menu:
-                if i < 1:
-                    iter = row = store.append(None, item['category'])
-                else:
-                    row = store.append(None, item['category'])
-                i += 1
-                for elm in item.get('feeds'):
-                    store.append(row, elm)
+            row = None
+            for item in data:
+                if item['type'] == 'category':
+                    row = store.append(None, self.__format_row(item))
+                if item['type'] == 'feed':
+                    store.append(row, self.__format_row(item))
         self.__make_special_folders(unread, starred, store)
         self.menuview.set_model(store)
         self.menuview.expand_all()

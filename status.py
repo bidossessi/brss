@@ -33,14 +33,16 @@ class Status (Gtk.HBox):
     def __init__(self):
         Gtk.HBox.__init__(self, spacing=3)
         self.set_no_show_all(True)
-        self.ok_img = Gtk.Image().new_from_stock('gtk-yes', Gtk.IconSize.MENU)
+        self.ok_img = Gtk.Image().new_from_stock('gtk-apply', Gtk.IconSize.MENU)
         self.add_img = Gtk.Image().new_from_stock('gtk-add', Gtk.IconSize.MENU)
+        self.info_img = Gtk.Image().new_from_stock('gtk-info', Gtk.IconSize.MENU)
         self.warning_img = Gtk.Image().new_from_stock('gtk-dialog-warning', Gtk.IconSize.MENU)
         self.error_img = Gtk.Image().new_from_stock('gtk-dialog-error', Gtk.IconSize.MENU)
         self.busy = Gtk.Spinner()
         self.status = Gtk.Statusbar()
         self.pack_start(self.ok_img, False, False, 0)
         self.pack_start(self.add_img, False, False, 0)
+        self.pack_start(self.info_img, False, False, 0)
         self.pack_start(self.warning_img, False, False, 0)
         self.pack_start(self.error_img, False, False, 0)
         self.pack_start(self.busy, False, False, 0)
@@ -59,6 +61,7 @@ class Status (Gtk.HBox):
     def __hide_icons(self):
         self.ok_img.hide()
         self.add_img.hide()
+        self.info_img.hide()
         self.warning_img.hide()
         self.error_img.hide()
         self.busy.stop()
@@ -72,11 +75,17 @@ class Status (Gtk.HBox):
         if context == "wait":
             self.busy.show()
             self.busy.start()
-        if context == "new":
+        if context == "ok":
             self.ok_img.show()
-        if context == "added":
+        if context == "info":
+            self.info_img.show()
+        if context in ["new", "added"]:
             self.add_img.show()
         if context == "warning":
             self.warning_img.show()
         if context == "error":
             self.error_img.show()
+
+    def clear(self):
+        self.__hide_icons()
+        self.status.set_text('')
