@@ -1,0 +1,67 @@
+2011-06-25 19:42:58,057 INFO     Updating all feeds
+2011-06-25 19:43:08,120 WARNING  Bozo exceptions found in feed http://green.autoblog.com/rss.xml
+2011-06-25 19:43:08,128 WARNING  Bozo exceptions found in feed http://www.droiddog.com/feed/
+2011-06-25 19:43:08,125 WARNING  Bozo exceptions found in feed http://www.linux-magazine.com/rss/feed/lmi_full
+2011-06-25 19:43:08,131 WARNING  Bozo exceptions found in feed http://arstechnica.com/index.rssx
+2011-06-25 19:43:08,133 WARNING  Bozo exceptions found in feed http://mynokiablog.com/feed/
+2011-06-25 19:43:08,134 WARNING  Bozo exceptions found in feed http://www.engadget.com/rss.xml
+2011-06-25 19:43:08,134 WARNING  Bozo exceptions found in feed http://www.linuxinsider.com/perl/syndication/rssfull.pl
+2011-06-25 19:43:08,135 WARNING  Bozo exceptions found in feed http://feeds.feedburner.com/smarthomeblog
+2011-06-25 19:43:08,137 WARNING  Bozo exceptions found in feed https://hermes.opensuse.org/feeds/25544.rdf
+2011-06-25 19:43:08,145 WARNING  Bozo exceptions found in feed http://lifehacker.com/index.xml
+2011-06-25 19:43:08,149 WARNING  Bozo exceptions found in feed http://blogs.gnome.org/commitdigest/feed/
+2011-06-25 19:43:08,159 WARNING  Bozo exceptions found in feed http://feeds2.feedburner.com/Smarterware
+2011-06-25 19:43:08,169 WARNING  Bozo exceptions found in feed http://news.opensuse.org/feed/
+2011-06-25 19:43:08,171 WARNING  Bozo exceptions found in feed http://rss.slashdot.org/Slashdot/slashdot
+2011-06-25 19:43:08,173 WARNING  Bozo exceptions found in feed http://www.boygeniusreport.com/feed/
+2011-06-25 19:43:08,176 WARNING  Bozo exceptions found in feed http://xbmc.org/feed/
+2011-06-25 19:43:08,178 WARNING  Bozo exceptions found in feed http://www.linuxjournal.com/node/feed
+2011-06-25 19:43:08,180 WARNING  Bozo exceptions found in feed http://www.gizmodo.com/index.xml
+2011-06-25 19:43:08,183 WARNING  Bozo exceptions found in feed http://linuxtoday.com/backend/biglt.rss
+2011-06-25 19:43:08,185 WARNING  Bozo exceptions found in feed http://feeds.phonedog.com/phonedog_cellphoneblog
+2011-06-25 19:43:08,188 WARNING  Bozo exceptions found in feed http://www.planetsuse.org/rss10.xml
+2011-06-25 19:43:08,190 WARNING  Bozo exceptions found in feed http://feeds.feedburner.com/Phoronix
+2011-06-25 19:43:08,193 WARNING  Bozo exceptions found in feed http://planet.gnome.org/news/rss20.xml
+2011-06-25 19:43:08,195 WARNING  Bozo exceptions found in feed http://feeds.feedburner.com/Inhabitat
+2011-06-25 19:43:08,195 WARNING  Bozo exceptions found in feed http://rss.allaboutmeego.com/aam-feed-summary.xml
+2011-06-25 19:43:08,196 WARNING  Bozo exceptions found in feed http://www.howtoforge.com/node/feed
+2011-06-25 19:43:08,196 WARNING  Bozo exceptions found in feed http://lwn.net/headlines/newrss
+2011-06-25 19:43:08,196 WARNING  Bozo exceptions found in feed http://planet.gnome.org/rss20.xml
+2011-06-25 19:43:09,110 WARNING  No favicon available for Publicité-dz.com
+2011-06-25 19:43:09,111 DEBUG    adding articles fo feed Publicité-dz.com
+2011-06-25 19:43:09,369 WARNING  No favicon available for Cerebrale Consulting
+2011-06-25 19:43:09,370 DEBUG    adding articles fo feed Cerebrale Consulting
+2011-06-25 19:43:09,526 INFO     Cerebrale Consulting updated! (total:0, unread:0, starred:0)
+2011-06-25 19:43:10,227 INFO     Favicon available for Domestica
+2011-06-25 19:43:10,228 DEBUG    adding articles fo feed Domestica
+2011-06-25 19:43:10,326 INFO     Domestica updated! (total:0, unread:0, starred:0)
+2011-06-25 19:43:10,460 INFO     Publicité-dz.com updated! (total:0, unread:0, starred:0)
+2011-06-25 19:43:10,460 WARNING  Feed http://xbmc.org/feed/ seems to be invalid
+2011-06-25 19:43:10,461 WARNING  Feed http://arstechnica.com/index.rssx seems to be invalid
+2011-06-25 19:43:10,462 WARNING  Feed http://feeds.feedburner.com/Inhabitat seems to be invalid
+2011-06-25 19:43:10,463 WARNING  Feed http://feeds.feedburner.com/smarthomeblog seems to be invalid
+2011-06-25 19:43:10,464 WARNING  Feed http://feeds2.feedburner.com/Smarterware seems to be invalid
+2011-06-25 19:43:10,465 WARNING  Feed http://green.autoblog.com/rss.xml seems to be invalid
+2011-06-25 19:43:10,466 WARNING  Feed http://lifehacker.com/index.xml seems to be invalid
+2011-06-25 19:43:10,467 WARNING  Feed http://rss.slashdot.org/Slashdot/slashdot seems to be invalid
+2011-06-25 19:43:10,468 WARNING  Feed http://www.engadget.com/rss.xml seems to be invalid
+2011-06-25 19:43:10,469 WARNING  Feed http://www.gizmodo.com/index.xml seems to be invalid
+2011-06-25 19:43:10,470 WARNING  Feed http://blogs.gnome.org/commitdigest/feed/ seems to be invalid
+2011-06-25 19:43:10,471 WARNING  Feed http://feeds.feedburner.com/Phoronix seems to be invalid
+2011-06-25 19:43:10,472 WARNING  Feed http://linuxtoday.com/backend/biglt.rss seems to be invalid
+2011-06-25 19:43:10,472 WARNING  Feed http://lwn.net/headlines/newrss seems to be invalid
+2011-06-25 19:43:10,473 WARNING  Feed http://news.opensuse.org/feed/ seems to be invalid
+2011-06-25 19:43:10,474 WARNING  Feed http://planet.gnome.org/news/rss20.xml seems to be invalid
+2011-06-25 19:43:10,475 WARNING  Feed http://planet.gnome.org/rss20.xml seems to be invalid
+2011-06-25 19:43:10,476 WARNING  Feed http://www.howtoforge.com/node/feed seems to be invalid
+2011-06-25 19:43:10,476 WARNING  Feed http://www.linux-magazine.com/rss/feed/lmi_full seems to be invalid
+2011-06-25 19:43:10,477 WARNING  Feed http://www.linuxinsider.com/perl/syndication/rssfull.pl seems to be invalid
+2011-06-25 19:43:10,478 WARNING  Feed http://www.linuxjournal.com/node/feed seems to be invalid
+2011-06-25 19:43:10,478 WARNING  Feed http://www.planetsuse.org/rss10.xml seems to be invalid
+2011-06-25 19:43:10,479 WARNING  Feed https://hermes.opensuse.org/feeds/25544.rdf seems to be invalid
+2011-06-25 19:43:10,480 WARNING  Feed http://feeds.phonedog.com/phonedog_cellphoneblog seems to be invalid
+2011-06-25 19:43:10,482 WARNING  Feed http://rss.allaboutmeego.com/aam-feed-summary.xml seems to be invalid
+2011-06-25 19:43:10,483 WARNING  Feed http://www.boygeniusreport.com/feed/ seems to be invalid
+2011-06-25 19:43:10,484 WARNING  Feed http://www.droiddog.com/feed/ seems to be invalid
+2011-06-25 19:43:10,486 WARNING  Feed http://mynokiablog.com/feed/ seems to be invalid
+2011-06-25 19:43:10,487 INFO     Update completed

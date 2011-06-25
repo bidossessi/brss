@@ -1,0 +1,3 @@
+recursive-include brss/pixmaps *
+recursive-include brss/applications *
+recursive-include brss/icons *
