@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="411.42859"
+   height="408.57141"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.1 r9760"
+   sodipodi:docname="rss.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.175"
+     inkscape:cx="-950.52699"
+     inkscape:cy="-70.096652"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1440"
+     inkscape:window-height="863"
+     inkscape:window-x="-1"
+     inkscape:window-y="17"
+     inkscape:window-maximized="1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-214,-149.21933)">
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none"
+       id="rect3062"
+       width="411.42859"
+       height="408.57141"
+       x="214"
+       y="149.21933"
+       ry="51.42857" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path3048"
+       d="m 420.37342,160.10261 0,44.23894 c 80.95638,1.37203 146.21019,67.31035 146.46984,148.53279 l 44.23893,0 C 610.82214,247.21652 525.76573,161.47861 420.37342,160.10261 z"
+       style="fill:#d45500;fill-opacity:1;stroke:none" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path3050"
+       d="m 420.37342,228.0376 0,28.71805 c 51.91577,1.49332 93.59886,43.90788 93.87946,96.11869 l 28.69006,0 C 542.65951,284.80678 488.14884,229.53283 420.37342,228.0376 z"
+       style="fill:#d45500;fill-opacity:1;stroke:none" />
+    <text
+       xml:space="preserve"
+       style="font-size:480.73825073px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:New Century Schoolbook"
+       x="231.33611"
+       y="525.46582"
+       id="text4033"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4035"
+         x="231.33611"
+         y="525.46582">f</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:139.71192932px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:New Century Schoolbook"
+       x="339.64117"
+       y="522.66449"
+       id="text4037"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4039"
+         x="339.64117"
+         y="522.66449">eed</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:2.20000005;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path4041"
+       sodipodi:cx="244.45691"
+       sodipodi:cy="208.5612"
+       sodipodi:rx="30.304577"
+       sodipodi:ry="30.304577"
+       d="m 274.76149,208.5612 a 30.304577,30.304577 0 1 1 -60.60916,0 30.304577,30.304577 0 1 1 60.60916,0 z"
+       transform="translate(200,123.21933)" />
+  </g>
+</svg>
