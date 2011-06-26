@@ -796,7 +796,7 @@ class Engine (dbus.service.Object):
             CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL);
             CREATE TABLE articles(id varchar(256) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, url varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, feed_id integer NOT NULL);
             CREATE TABLE images(id integer PRIMARY KEY, name varchar(256) NOT NULL, url TEXT NOT NULL, article_id varchar(256) NOT NULL);
-            INSERT INTO categories VALUES('1', 'General');
+            INSERT INTO categories VALUES('1', 'Uncategorized');
             ''')
         self.conn.commit()
         cursor.close()

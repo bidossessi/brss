@@ -61,21 +61,46 @@ class Tree (Gtk.VBox, GObject.GObject):
         GObject.type_register(Tree)
         #store (type,id,name,count,stock-id) 
         self.store = Gtk.TreeStore(str, str, str, int, str)
+        self.store.set_sort_func(2, self.__sort_type, 0)
+        #~ self.store.set_default_sort_func(self.__sort_type, 0)
+        self.store.set_sort_column_id(2, Gtk.SortType.ASCENDING)
         self.menuview = Gtk.TreeView()
         self.menuview.set_model(self.store)
         self.menuview.set_headers_visible(False)
         #TODO: set automatic sorting
-        self.menucol = Gtk.TreeViewColumn()
-        self.textcell = Gtk.CellRendererText()
-        self.iconcell = Gtk.CellRendererPixbuf()
-        self.menucol.pack_start(self.iconcell, False)
-        self.menucol.pack_start(self.textcell, True)
-        self.menucol.set_cell_data_func(self.textcell, self.__format_name)
+        col = Gtk.TreeViewColumn()
+        textcell = Gtk.CellRendererText()
+        iconcell = Gtk.CellRendererPixbuf()
+        col.pack_start(iconcell, False)
+        col.pack_start(textcell, True)
+        col.set_cell_data_func(textcell, self.__format_name)
         #~ self.menucol.set_cell_data_func(self.iconcell, self.__format_icon)
-        self.menucol.add_attribute(self.iconcell, "stock-id", 4)
-        self.menuview.append_column(self.menucol)
+        col.add_attribute(iconcell, "stock-id", 4)
+        col.set_sort_order(Gtk.SortType.ASCENDING)
+        self.menuview.append_column(col)
         self.menuselect = self.menuview.get_selection()
+        ## SPECIALS
+        self.sstore = Gtk.TreeStore(str, str, str, int, str)
+        self.sview = Gtk.TreeView()
+        self.sview.set_model(self.sstore)
+        self.sview.set_headers_visible(False)
+        #TODO: set automatic sorting
+        col = Gtk.TreeViewColumn()
+        textcell = Gtk.CellRendererText()
+        iconcell = Gtk.CellRendererPixbuf()
+        col.pack_start(iconcell, False)
+        col.pack_start(textcell, True)
+        col.set_cell_data_func(textcell, self.__format_name)
+        col.add_attribute(iconcell, "stock-id", 4)
+        self.sview.append_column(col)
+        self.sselect = self.sview.get_selection()
+        
         # containers
+        msc = Gtk.ScrolledWindow()
+        msc.set_shadow_type(Gtk.ShadowType.IN)
+        msc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        msc.add(self.sview)
+        self.pack_start(msc, False, True, 0)
         msc = Gtk.ScrolledWindow()
         msc.set_shadow_type(Gtk.ShadowType.IN)
         msc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -92,8 +117,10 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.__connect_signals()
         
     def __connect_signals(self):
-        self.menuselect.connect("changed", self.__selection_changed)
+        self.menuselect.connect("changed", self.__selection_changed, "l")
         self.menuview.connect("row-activated", self.__row_activated)
+        self.sselect.connect("changed", self.__selection_changed, "s")
+        self.sview.connect("row-activated", self.__row_activated)
         
     def __setup_icons(self, path, stock_id):
         try:
@@ -107,6 +134,43 @@ class Tree (Gtk.VBox, GObject.GObject):
             factory.add_default()
             return True
         except: return False
+    
+
+    def __sort_type(self, model, iter1, iter2, tp):
+        #1. make sure that starred stays below unread:
+        tp1 = model.get_value(iter1, tp)
+        tp2 = model.get_value(iter2, tp)
+        id1 = model.get_value(iter1, 1)
+        id2 = model.get_value(iter2, 1)
+        try:
+            name1 = model.get_value(iter1, 2).lower()
+            name2 = model.get_value(iter2, 2).lower()
+        except:
+            name1 = model.get_value(iter1, 2)
+            name2 = model.get_value(iter2, 2)
+        #3. put general on top
+        if id1 == "1":
+            print "pushing {0} above {1}".format(name1, name2)
+            return -1
+        if id2 == "1":
+            print "pushing {1} above {0}".format(name1, name2)
+            return 1
+        #~ # finally sort by string
+        if tp1 < tp2:
+            print "pushing {0} above {1}".format(name1, name2)
+            return -1
+        if tp1 > tp2:
+            print "pushing {0} below {1}".format(name1, name2)
+            return -1
+        if name1 < name2:
+            print "pushing {0} above {1}".format(name1, name2)
+            return -1
+        if name1 > name2:
+            print "pushing {0} below {1}".format(name1, name2)
+            return 1
+        print "not comparing".format(name1, name2)     
+        return 0
+        #.now we can compare between text attributes
         
     def __setup_dnd(self):
         target_entries = (('example', Gtk.TargetFlags.SAME_WIDGET, 1),)
@@ -164,16 +228,18 @@ class Tree (Gtk.VBox, GObject.GObject):
         return r
         
     def deselect(self, *args):
+        self.sselect.unselect_all()
         self.menuselect.unselect_all()
         self.current_item = None
         
-    def __search(self, col, value):
+    def __search(self, col, value, model=None):
         """
         Returns a path for the value we are looking for.
         """
+        if not model:
+            model = self.menuview.get_model()
         gmap = {0:'type', 1:'id', 2:'name', 3:'count'}
         #~ print "seaching for {0} == {1}".format(gmap.get(col), value)
-        model = self.menuview.get_model()
         iter = model.get_iter_first()
         while iter:
             v = model.get_value(iter, col)
@@ -192,11 +258,12 @@ class Tree (Gtk.VBox, GObject.GObject):
 
     def refresh_unread_counts(self, item):
         # we need the increment
-        iter = self.__search(1, item['feed_id'])
+        print "refreshing", item['name']
+        iter = self.__search(1, item['id'])
         if iter:
             ori = self.store.get_value(iter, 3) # original
             inc = item['count'] - ori
-            self.__update_count(self.store, iter, 3, inc)
+            self.__update_count(self.store, iter, 3, inc, [])
             self.__update_parent_count(iter, inc, [])
         # item is a feed
         iter = self.__search(0, 'unread')
@@ -211,8 +278,8 @@ class Tree (Gtk.VBox, GObject.GObject):
 
     def update_starred(self, ilist, item):
         # if item['starred'] is 0, we go minus
-        iter = self.__search(0, 'starred')
-        self.__update_count(self.store, iter, 3, item['starred'], ['toggle'])
+        iter = self.__search(0, 'starred', self.sstore)
+        self.__update_count(self.sstore, iter, 3, item['starred'], ['toggle'])
 
     def update_unread(self, ilist, item, col="read"):
         flags = ['toggle', 'invert']
@@ -223,9 +290,9 @@ class Tree (Gtk.VBox, GObject.GObject):
             self.__update_count(self.store, iter, 3, item[col], flags)
             self.__update_parent_count(iter, item[col], flags)
         # now update unread
-        iter = self.__search(0, 'unread')
+        iter = self.__search(0, 'unread', self.sstore)
         if iter:
-            self.__update_count(self.store, iter, 3, item[col], flags)
+            self.__update_count(self.sstore, iter, 3, item[col], flags)
     
 
     def __update_count (self, model, iter, col, var, flags):
@@ -240,13 +307,15 @@ class Tree (Gtk.VBox, GObject.GObject):
             gmap = {0:+1, 1:-1}# invert handling
         n = gmap.get(var) or var
         nval = ol + n # increment
+        print "setting col {0} to {1}".format(col, nval)
         model.set_value(iter, col, nval)
         
-    def __make_special_folders(self, unread, starred, store):
-        u = ('unread', '','Unread', unread, 'gtk-new')
-        s = ('starred', '', 'Starred', starred, 'gtk-about')
-        store.append(None, u)
-        store.append(None, s)
+    def __make_special_folders(self, unread, starred):
+        self.sstore.clear()
+        u = ('unread', '0','Unread', unread, 'gtk-new')
+        s = ('starred', '0', 'Starred', starred, 'gtk-about')
+        self.sstore.append(None, u)
+        self.sstore.append(None, s)
 
 
     def fill_menu(self, data, unread, starred):
@@ -260,7 +329,7 @@ class Tree (Gtk.VBox, GObject.GObject):
                     row = self.store.append(None, self.__format_row(item))
                 if item['type'] == 'feed':
                     self.store.append(row, self.__format_row(item))
-        self.__make_special_folders(unread, starred, self.store)
+        self.__make_special_folders(unread, starred)
         self.menuview.expand_all()
         self.emit('list-loaded')
 
@@ -275,22 +344,26 @@ class Tree (Gtk.VBox, GObject.GObject):
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
-    def __selection_changed(self, selection):
+    def __selection_changed(self, selection, tg):
         item = self.__get_current(selection)
         if item:
             # emit the right signal
             self.emit('item-selected', item)
+       
     
     def __get_current(self, selection):
-        (model, iter) = selection.get_selected()
-        if iter:
-            item = {
-                'type': model.get_value(iter, 0),
-                'id': model.get_value(iter, 1),
-                'name': model.get_value(iter, 2),
-            }
-            self.current_item = item
-            return item
+        try:
+            (model, iter) = selection.get_selected()
+            path = model.get_path(iter)
+            if iter:
+                item = {
+                    'type': model.get_value(iter, 0),
+                    'id': model.get_value(iter, 1),
+                    'name': model.get_value(iter, 2),
+                }
+                self.current_item = item
+                return item
+        except:pass
     
         
     def run_dialog(self, dialog_name, item):
@@ -300,26 +373,30 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.emit('dcall-request', callback_name, item)
         
     # convenience
-    #~ def do_item_selected(self, item):
-        #~ print 'Item selected: ', item
+    def do_item_selected(self, item):
+        print 'Item selected: ', item
+        if item['type'] in ['starred', 'unread']:
+            self.menuselect.unselect_all()
+        elif item['type'] in ['feed', 'category']:
+            self.sselect.unselect_all()
     def do_list_loaded(self):
-        iter = self.__search(0, 'unread')
-        self.menuselect.select_iter(iter)
+        iter = self.__search(0, 'unread', self.sstore)
+        self.sselect.select_iter(iter)
         
 class TreeMenu(Gtk.Menu):
     """
     TreeMenu extends the standard Gtk.Menu by adding methods 
     for context handling.
     """
-    def __init__(self, treeview):
+    def __init__(self, tree):
         #~ #print "creating a ViewMenu"
         Gtk.Menu.__init__(self)
         self._dirty = True
         self._signal_ids = []
-        self._treeview = treeview
+        self._tree = tree
+        self._treeview = tree.menuview
         self._treeview.connect('button-release-event', self._on_event)
         self._treeview.connect('key-release-event', self._on_event)
-        self._treeview.connect('item-selected', self._monitor_instance)
 
     def clean(self):
         for child in self.get_children():
@@ -335,9 +412,6 @@ class TreeMenu(Gtk.Menu):
             Gtk.Menu.popup(self, None, None, None, None,
                        event.button, event.time)
     def _create(self, item):
-        if not self._dirty:
-            return
-
         self.clean()
 
         for i in ['Mark all as read', 'Update', 'Edit', 'Delete', 'sep',
@@ -358,26 +432,21 @@ class TreeMenu(Gtk.Menu):
             menuitem.show()
             self.append(menuitem)
         
-        self._dirty = False
-
     def _on_menuitem__activate(self, menuitem, callname, item):
         # switch dialog or direct call
         if callname in ['Edit', 'Add a Category', 'Add a Feed']:
-            self._treeview.run_dialog(callname, item)
+            self._tree.run_dialog(callname, item)
         elif callname in ['Mark all as read', 'Update', 'Delete']:
-            self._treeview.run_dcall(callname, item)
+            self._tree.run_dcall(callname, item)
 
     def _on_event(self, treeview, event):
         """Respond to mouse click or key press events in a GtkTree."""
         if event.type == Gdk.EventType.BUTTON_RELEASE:
             if event.button == 3:
-                self.popup(event, self._treeview.current_item)
+                self.popup(event, self._tree.current_item)
         elif event.type == Gdk.EventType.KEY_RELEASE:
             if event.keyval == 65383: # Menu
-                self.popup(event, self._treeview.current_item)
-
-    def _monitor_instance(self, treeview, item):
-        self._dirty = True
+                self.popup(event, self._tree.current_item)
 
 
 if __name__ == '__main__':
