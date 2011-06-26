@@ -167,28 +167,6 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menuselect.unselect_all()
         self.current_item = None
         
-    def update_row(self, item):
-        self.update_unread(None, item)
-
-    def update_starred(self, ilist, item):
-        # if item['starred'] is 0, we go minus
-        iter = self.__search(0, 'starred')
-        self.__update_count(self.store, iter, 3, item['starred'])
-
-    def update_unread(self, ilist, item):
-        # if item['read'] is 0, we go plus
-        iter = self.__search(0, 'unread')
-        if model and iter:
-            self.__update_count(self.store, iter, 3, item['read'], True)
-        # now try to update the originating feed
-        iter = self.__search(1, item['feed_id'])
-        if model and iter:
-            self.__update_count(self.store, iter, 3, item['read'], True)
-            # if at all possible, update the category
-            if model.iter_parent(iter):
-                self.__update_count(self.store, 
-                    self.store.iter_parent(iter), 3, item['read'], True)
-    
     def __search(self, col, value):
         """
         Returns a path for the value we are looking for.
@@ -212,12 +190,56 @@ class Tree (Gtk.VBox, GObject.GObject):
                     citer = model.iter_next(citer)
             iter = model.iter_next(iter)
 
-    def __update_count (self, model, iter, col, var, inverse=False):
-        pmap = {0:-1, 1:+1}
-        if inverse:
-            pmap = {0:+1, 1:-1}
-        ol = model.get_value(iter, col)
-        nval = ol+pmap.get(var)
+    def refresh_unread_counts(self, item):
+        # we need the increment
+        iter = self.__search(1, item['feed_id'])
+        if iter:
+            ori = self.store.get_value(iter, 3) # original
+            inc = item['count'] - ori
+            self.__update_count(self.store, iter, 3, inc)
+            self.__update_parent_count(iter, inc, [])
+        # item is a feed
+        iter = self.__search(0, 'unread')
+        if iter:
+            o = self.store.get_value(iter, 3) 
+            self.__update_count(self.store, iter, 3, item[col], True)
+    
+    def __update_parent_count(self, iter, val, flags):
+        if self.store.iter_parent(iter):
+            self.__update_count(self.store, 
+                self.store.iter_parent(iter), 3, val, flags)
+
+    def update_starred(self, ilist, item):
+        # if item['starred'] is 0, we go minus
+        iter = self.__search(0, 'starred')
+        self.__update_count(self.store, iter, 3, item['starred'], ['toggle'])
+
+    def update_unread(self, ilist, item, col="read"):
+        flags = ['toggle', 'invert']
+        # if item['read'] is 0, we go plus
+        # try to update the originating feed
+        iter = self.__search(1, item['feed_id'])
+        if iter:
+            self.__update_count(self.store, iter, 3, item[col], flags)
+            self.__update_parent_count(iter, item[col], flags)
+        # now update unread
+        iter = self.__search(0, 'unread')
+        if iter:
+            self.__update_count(self.store, iter, 3, item[col], flags)
+    
+
+    def __update_count (self, model, iter, col, var, flags):
+        if 'replace' in flags:
+            model.set_value(iter, col, var)
+            return
+        nval = ol = model.get_value(iter, col) # old value
+        gmap = {}
+        if 'toggle' in flags:
+            gmap = {0:-1, 1:+1}# handle boolean
+        if 'invert' in flags:
+            gmap = {0:+1, 1:-1}# invert handling
+        n = gmap.get(var) or var
+        nval = ol + n # increment
         model.set_value(iter, col, nval)
         
     def __make_special_folders(self, unread, starred, store):

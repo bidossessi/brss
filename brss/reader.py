@@ -249,7 +249,7 @@ class Reader (Gtk.Window, GObject.GObject):
         #~ self.engine.connect_to_signal('added', self.__populate_menu)
         self.engine.connect_to_signal('added', self.status.message)
         self.engine.connect_to_signal('newitem', self.tree.insert_row)
-        self.engine.connect_to_signal('feedupdate', self.tree.update_row)
+        self.engine.connect_to_signal('feedupdate', self.tree.refresh_unread_counts)
         # might want to highlight these a bit more
         #~ self.engine.connect_to_signal('warning', self.status.message)
     

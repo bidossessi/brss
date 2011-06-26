@@ -277,6 +277,7 @@ class Engine (dbus.service.Object):
     @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def get_menu_items(self):
         """Return an ordered list of categories and feeds."""
+        self.log.debug("Building menu items")
         menu = [] 
         cat = self.__get_all_categories()
         for c in cat:
@@ -534,6 +535,7 @@ class Engine (dbus.service.Object):
         cursor.close()
         return {'type':'category','id': row[0], 'name':row[1], 'count':'0'}
     def __get_all_categories(self):
+        self.log.debug("Getting all categories")        
         cat = []
         cursor = self.conn.cursor()
         cursor.execute('SELECT id,name FROM categories ORDER BY name ASC')
@@ -543,6 +545,7 @@ class Engine (dbus.service.Object):
         cursor.close()
         return cat
     def __get_feeds_for(self, cid):
+        self.log.debug("Getting feeds for category: {0}".format(cid))                
         feeds = []
         q = 'SELECT id,name,url, category_id FROM feeds WHERE category_id = "{0}" ORDER BY name ASC'.format(cid)
         cursor = self.conn.cursor()
