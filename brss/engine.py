@@ -81,7 +81,7 @@ class FeedGetter(threading.Thread):
         Fetch informations and articles for a feed.
         Returns the feed.
         """
-        time.sleep(10)
+        time.sleep(2)
         f = feedparser.parse(feed['url'])
         # get (or set default) infos from feed
         if(hasattr(f.feed,'title')):
@@ -336,7 +336,7 @@ class Engine (dbus.service.Object):
                 if len(node) is not 0:
                     self.create({'type':'category','name':name})
                     current_category = self.__get_category(name)['id']
-        self.notice('added', 'Feeds imported!')
+        self.notice('ok', 'Feeds imported!')
     
     @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def search_for(self, string):
@@ -396,11 +396,12 @@ class Engine (dbus.service.Object):
 
     @dbus.service.signal('com.itgears.brss', signature='a{sv}')
     def feedupdate(self, feed):
-        self.log.debug("Updated feed: {0}".format(feed['name']))
+        self.log.debug("FeedUpdate: {0}".format(feed['name']))
 
     @dbus.service.signal('com.itgears.brss', signature='a{sv}')
     def newitem(self, item):
-        self.log.debug("Newitem {0} {1}".format(item['type'], item['name']))
+        #TODO: This should also handle articles
+        self.log.debug("NewItem {0} {1}".format(item['type'], item['name']))
 
     ## 6. Runners and stoppers
     @dbus.service.method('com.itgears.brss')
@@ -692,7 +693,7 @@ class Engine (dbus.service.Object):
         """Toggles the state of an article column.
         Returns the current state
         """
-        self.log.debug("Toggling {0}: {1} on {2}".format(col, item[col], item['title']))
+        self.log.debug("Toggling {0}: {1} on {2}".format(col, item[col], item['id']))
         q = 'UPDATE articles set {0} = {1} WHERE id = "{2}"'.format(col, item[col], item['id'])
         cursor = self.conn.cursor()
         cursor.execute(q)

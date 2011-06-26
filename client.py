@@ -23,13 +23,13 @@ def log(*args):
     print args
     
 try:
-    create({'type':'category','name': 'Other category'})
-    f = {'type':'feed','url': 'http://localhost/~b_sodonon/domestica/?feed=rss2'}
-    create(f)
-    f = {'type':'feed','url': 'http://localhost/~b_sodonon/wordpress/?feed=rss2'}
-    create(f)
-    f = {'type':'feed','url': 'http://localhost/~b_sodonon/marketing-dz.com/rss.php?category=home'}
-    create(f)
+    #~ create({'type':'category','name': 'Other category'})
+    #~ f = {'type':'feed','url': 'http://localhost/~b_sodonon/domestica/?feed=rss2'}
+    #~ create(f)
+    #~ f = {'type':'feed','url': 'http://localhost/~b_sodonon/wordpress/?feed=rss2'}
+    #~ create(f)
+    #~ f = {'type':'feed','url': 'http://localhost/~b_sodonon/marketing-dz.com/rss.php?category=home'}
+    #~ create(f)
     #~ update('all'),
         #~ reply_handler=log,
         #~ error_handler=log)

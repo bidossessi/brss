@@ -246,8 +246,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.view.connect('link-clicked', self.__to_browser)
         self.view.connect('link-hovered', self.__status_info)
         self.engine.connect_to_signal('notice', self.status.message)
-        self.engine.connect_to_signal('added', self.__populate_menu)
+        #~ self.engine.connect_to_signal('added', self.__populate_menu)
         self.engine.connect_to_signal('added', self.status.message)
+        self.engine.connect_to_signal('newitem', self.tree.insert_row)
+        self.engine.connect_to_signal('feedupdate', self.tree.update_row)
         # might want to highlight these a bit more
         #~ self.engine.connect_to_signal('warning', self.status.message)
     
@@ -281,14 +283,15 @@ class Reader (Gtk.Window, GObject.GObject):
             dialog.hide()
             self.status.message("wait", "Importing Feeds")
             self.import_opml(filename, 
-                reply_handler=self.__populate_menu,
+                reply_handler=self.__to_log,
                 error_handler=self.__to_log)
     
     def __populate_menu(self, *args):
+        print "Populating menu"
         menu = self.get_menu_items()
         unread = self.count_unread()
         starred = self.count_starred()
-        self.tree.fill_menu(menu, int(unread), int(starred))
+        self.tree.fill_menu(menu, unread, starred)
         
     def __toggle_starred(self, ilist, item):
         self.toggle_starred(item)
@@ -307,12 +310,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.get_article(item, 
                 reply_handler=self.view.show_article,
                 error_handler=self.__to_log)
-    def __delete_item(self, tree, item):
-        self.delete_item(item,
-                reply_handler=self.__populate_menu,
-                error_handler=self.__to_log)
+    def __handle_new(self, item):
+        if item['type'] in ['feed', 'category']:
+            self.tree.insert_row(item)
     def __handle_dcall(self, caller, name, item):
-        print "{0}: {1}".format(name, item)
         if name in ['Update', 'Update all']:
             self.__toggle_stop()
             self.update(item,
@@ -392,6 +393,8 @@ class Reader (Gtk.Window, GObject.GObject):
     def run(self):
         Gtk.main()
 
+    def do_loaded(self, *args):
+        print "Reader loaded"
 def main():
     app = Reader()
     app.run()

@@ -59,8 +59,12 @@ class Tree (Gtk.VBox, GObject.GObject):
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)
+        #store (type,id,name,count,stock-id) 
+        self.store = Gtk.TreeStore(str, str, str, int, str)
         self.menuview = Gtk.TreeView()
+        self.menuview.set_model(self.store)
         self.menuview.set_headers_visible(False)
+        #TODO: set automatic sorting
         self.menucol = Gtk.TreeViewColumn()
         self.textcell = Gtk.CellRendererText()
         self.iconcell = Gtk.CellRendererPixbuf()
@@ -163,23 +167,27 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menuselect.unselect_all()
         self.current_item = None
         
+    def update_row(self, item):
+        self.update_unread(None, item)
+
     def update_starred(self, ilist, item):
         # if item['starred'] is 0, we go minus
-        model, iter = self.__search(0, 'starred')
-        self.__update_count(model, iter, 3, item['starred'])
+        iter = self.__search(0, 'starred')
+        self.__update_count(self.store, iter, 3, item['starred'])
 
     def update_unread(self, ilist, item):
         # if item['read'] is 0, we go plus
-        model, iter = self.__search(0, 'unread')
+        iter = self.__search(0, 'unread')
         if model and iter:
-            self.__update_count(model, iter, 3, item['read'], True)
+            self.__update_count(self.store, iter, 3, item['read'], True)
         # now try to update the originating feed
-        model, iter = self.__search(1, item['feed_id'])
+        iter = self.__search(1, item['feed_id'])
         if model and iter:
-            self.__update_count(model, iter, 3, item['read'], True)
+            self.__update_count(self.store, iter, 3, item['read'], True)
             # if at all possible, update the category
             if model.iter_parent(iter):
-                self.__update_count(model, model.iter_parent(iter), 3, item['read'], True)
+                self.__update_count(self.store, 
+                    self.store.iter_parent(iter), 3, item['read'], True)
     
     def __search(self, col, value):
         """
@@ -193,14 +201,14 @@ class Tree (Gtk.VBox, GObject.GObject):
             v = model.get_value(iter, col)
             if value == v:
                 #~ print( "match found: {0} => {1}: {2}".format(gmap.get(col), v, model.get_value(iter, 2)))
-                return model, iter
+                return iter
             elif model.iter_has_child(iter):
                 citer = model.iter_children(iter)
                 while citer:
                     v = model.get_value(citer, col)
                     if value == v:
                         #~ print( "match found: {0} => {1}: {2}".format(gmap.get(col), v, model.get_value(citer, 2)))
-                        return model, citer
+                        return citer
                     citer = model.iter_next(citer)
             iter = model.iter_next(iter)
 
@@ -222,20 +230,26 @@ class Tree (Gtk.VBox, GObject.GObject):
     def fill_menu(self, data, unread, starred):
         """Load the given data into the left menuStore"""
         # return the first iter
-        self.menuview.set_model(None)
-        store = Gtk.TreeStore(str, str, str, int, str)
+        self.store.clear()
         if data:
             row = None
             for item in data:
                 if item['type'] == 'category':
-                    row = store.append(None, self.__format_row(item))
+                    row = self.store.append(None, self.__format_row(item))
                 if item['type'] == 'feed':
-                    store.append(row, self.__format_row(item))
-        self.__make_special_folders(unread, starred, store)
-        self.menuview.set_model(store)
+                    self.store.append(row, self.__format_row(item))
+        self.__make_special_folders(unread, starred, self.store)
         self.menuview.expand_all()
         self.emit('list-loaded')
 
+    def insert_row(self, item):
+        # start with categories:
+        if item['type'] == 'category':
+            self.store.append(None, self.__format_row(item))
+        elif item['type'] == 'feed':
+            iter = self.__search(1,item['category'])
+            self.store.append(iter, self.__format_row(item))
+            self.menuview.expand_row(self.store.get_path(iter), False)
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
@@ -244,7 +258,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         if item:
             # emit the right signal
             self.emit('item-selected', item)
-
+    
     def __get_current(self, selection):
         (model, iter) = selection.get_selected()
         if iter:
@@ -267,7 +281,7 @@ class Tree (Gtk.VBox, GObject.GObject):
     #~ def do_item_selected(self, item):
         #~ print 'Item selected: ', item
     def do_list_loaded(self):
-        model, iter = self.__search(0, 'unread')
+        iter = self.__search(0, 'unread')
         self.menuselect.select_iter(iter)
         
 class TreeMenu(Gtk.Menu):
