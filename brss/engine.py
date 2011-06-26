@@ -417,7 +417,7 @@ class Engine (dbus.service.Object):
         self.log = logger
         self.__in_update = False
         self.__last_update = False
-        self.__update_interval = 60 # TODO: get interval from config
+        self.__update_interval = 300 # TODO: get interval from config
         self.__max_entries = 10 # TODO: get max from config
         # check
         try:
@@ -428,7 +428,10 @@ class Engine (dbus.service.Object):
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.brss', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/brss/Engine')
+        self.log.debug("Engine started")
         Gdk.threads_add_timeout_seconds(0, self.__update_interval, self.__timed_update, None)
+    def __repr__(self):
+        return "Engine"
     ## Create (*C*RUD)
     def __insert_category(self, category):
         try:
@@ -641,6 +644,7 @@ class Engine (dbus.service.Object):
         This is where old feeds are removed.
         We only keep the last `max_entries` articles.
         """
+        self.log.debug("Cleaning up feed {0}".format(feed['name'])
         q = 'SELECT id FROM articles WHERE feed_id = "{0}" ORDER BY date DESC'.format(feed['id'])
         cursor = self.conn.cursor()
         cursor.execute(q)
@@ -660,19 +664,18 @@ class Engine (dbus.service.Object):
                         self.__count_starred_items(feed)))
     
     def __timed_update(self, *args):
-        self.log.info("Running timed update")
-        # check every
+        self.log.debug("Running timed update")
         now = time.time()
         timed = self.__last_update + self.__update_interval
-        #~ if now > timed and not self.__in_update:
-            #~ self.__update_all()
-            #~ return True
+        if now > timed and not self.__in_update:
+            self.__update_all()
+        return True
     
     def __toggle_article(self, col, item):
         """Toggles the state of an article column.
         Returns the current state
         """
-        # get original state
+        self.log.debug("Toggling {0}: {1} on {2}".format(col, item[col], item['title']))
         q = 'UPDATE articles set {0} = {1} WHERE id = "{2}"'.format(col, item[col], item['id'])
         cursor = self.conn.cursor()
         cursor.execute(q)
@@ -749,7 +752,7 @@ class Engine (dbus.service.Object):
             )
         return articles
     def __clean_up(self):
-        pass
+        self.log.debug("Closing {0}".format(self))
     def __item_exists(self, table, key, value):
         """
         Verify if an item exists in the database.
