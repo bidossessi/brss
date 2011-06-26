@@ -36,7 +36,7 @@ __version__ = '0.1'
 home = os.getenv("HOME")
 BASE_PATH = os.path.join(home,'.config','brss')
 def check_path():
-    print BASE_PATH
+    print "Using base_path", BASE_PATH
     if not os.path.exists(BASE_PATH):
         os.makedirs(BASE_PATH)
 
@@ -54,7 +54,6 @@ def run_engine():
     if session_bus.request_name("com.itgears.brss") != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "application already running"
     else:
-        print "running BRSS Engine"
         log = Logger(BASE_PATH)
         engine = Engine(log, BASE_PATH)
         engine.run()

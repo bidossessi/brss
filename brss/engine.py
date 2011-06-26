@@ -162,7 +162,7 @@ class FeedGetter(threading.Thread):
             os.makedirs(self.favicon_path)
         fav = os.path.join(self.favicon_path,feed['id'])
         if os.path.exists(fav): # we already have it, don't re-download
-            self.log.info("Favicon available for {0}".format(feed['name']))
+            self.log.debug("Favicon available for {0}".format(feed['name']))
             return True 
         try:
             # grab some html
@@ -175,9 +175,9 @@ class FeedGetter(threading.Thread):
                 local_file.write(webfile.read())
                 local_file.close()
                 webfile.close()
-                self.log.info("Favicon found for {0}".format(feed['name']))
+                self.log.debug("Favicon found for {0}".format(feed['name']))
             else:
-                self.log.warning("No favicon available for {0}".format(feed['name']))
+                self.log.debug("No favicon available for {0}".format(feed['name']))
         except Exception, e:
             self.log.warning( "Couldn't get favicon for {0}: {1}".format(feed['name'], e))
 
@@ -274,7 +274,7 @@ class Engine (dbus.service.Object):
             self.notice('warning', "[{0}] {1} deleted!".format(
                         item['type'].capitalize(), item['name'].encode('utf-8')))
     ## 2. Menu
-    @dbus.service.method('com.itgears.brss', out_signature='aa{ss}')
+    @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def get_menu_items(self):
         """Return an ordered list of categories and feeds."""
         menu = [] 
@@ -282,13 +282,13 @@ class Engine (dbus.service.Object):
         for c in cat:
             feeds = self.__get_feeds_for(c['id']) or []
             for f in feeds:
-                c['count'] = str(int(c['count'])+int(f['count']))
+                c['count'] = c['count'] + f['count']
             menu.append(c)
             if feeds:
                 menu.extend(feeds)
         return menu
     ## 3. Articles list
-    @dbus.service.method('com.itgears.brss', out_signature='aa{ss}')
+    @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def get_articles_for(self, item):
         """
         Get all articles for a feed or category.
@@ -312,8 +312,8 @@ class Engine (dbus.service.Object):
             if item['type'] == 'starred':
                 return self.__get_starred_articles()
     ## 4. Article
-    @dbus.service.method('com.itgears.brss', in_signature='a{ss}',
-                        out_signature='(a{ss}as)')
+    @dbus.service.method('com.itgears.brss', in_signature='a{sv}',
+                        out_signature='(a{sv}as)')
     def get_article(self, item):
         """Returns a full article."""
         article = self.__get_article(item['id'])
@@ -338,7 +338,7 @@ class Engine (dbus.service.Object):
                     current_category = self.__get_category(name)['id']
         self.notice('added', 'Feeds imported!')
     
-    @dbus.service.method('com.itgears.brss', out_signature='aa{ss}')
+    @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def search_for(self, string):
         """Search article contents for a string.
         returns a list of articles."""
@@ -354,11 +354,11 @@ class Engine (dbus.service.Object):
             self.warning('warning', 'Search for "{0}" failed!'.format(string))
             raise e
 
-    @dbus.service.method('com.itgears.brss', in_signature='a{ss}')
+    @dbus.service.method('com.itgears.brss', in_signature='a{sv}')
     def toggle_starred(self, item):
         """Toggle the starred status of an article"""
         self.__toggle_article('starred', item)
-    @dbus.service.method('com.itgears.brss', in_signature='a{ss}')
+    @dbus.service.method('com.itgears.brss', in_signature='a{sv}')
     def toggle_read(self, item):
         """Toggle the starred status of an article"""
         self.__toggle_article('read', item)
@@ -393,7 +393,15 @@ class Engine (dbus.service.Object):
         Emit a notice signal of type 'wtype' with 'message'.
         """
         self.log.info(message)
-    
+
+    @dbus.service.signal('com.itgears.brss', signature='a{sv}')
+    def feedupdate(self, feed):
+        self.log.debug("Updated feed: {0}".format(feed['name']))
+
+    @dbus.service.signal('com.itgears.brss', signature='a{sv}')
+    def newitem(self, item):
+        self.log.debug("Newitem {0} {1}".format(item['type'], item['name']))
+
     ## 6. Runners and stoppers
     @dbus.service.method('com.itgears.brss')
     def run(self):
@@ -423,12 +431,12 @@ class Engine (dbus.service.Object):
         try:
             self.__get_all_categories()
         except Exception, e:
-            self.log.warning(e)
+            self.log.warning("Could not find database: {0}".format(e))
             self.__init_database()
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.brss', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/brss/Engine')
-        self.log.debug("Engine started")
+        self.log.debug("Starting {0}".format(self))
         Gdk.threads_add_timeout_seconds(0, self.__update_interval, self.__timed_update, None)
     def __repr__(self):
         return "Engine"
@@ -443,21 +451,23 @@ class Engine (dbus.service.Object):
             cursor.execute(q)
             self.conn.commit()
             cursor.close()
+            self.newitem(category) #allows autoinserting
             self.notice('added', "New category added: {0}".format(category['name']))
         except AssertionError:
-            self.warning("error", 'Category already exists!')
+            self.log.debug('Category {0} already exists!, skipping'.format(category['name']))
     def __insert_feed(self, feed):
         try:
-            assert self.__item_exists('feeds', 'id', feed['id']) == False
+            assert self.__item_exists('feeds', 'url', feed['url']) == False
             q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}")'.format(
                 feed['id'], feed['name'], feed['url'], feed['category'])
             cursor = self.conn.cursor()
             cursor.execute(q)
             self.conn.commit()
             cursor.close()
+            self.newitem(feed)#allows autoinserting
             self.notice('added', "New feed added: {0}".format(feed['name']))            
         except AssertionError:
-            self.warning("error", 'Feed already exists!')
+            self.log.debug('Feed {0} already exists!, skipping'.format(feed['name']))
     def __insert_article(self, art):
         try:
             assert self.__item_exists('articles', 'url', art['url']) == False
@@ -483,8 +493,13 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
         except AssertionError, e:
-            print "article {0} already exists, skipping".format(art['id'])
+            self.log.debug("article {0} already exists, skipping".format(art['id']))
     def __insert_items_for(self, feed):
+        try:
+            articles = feed.pop('articles') # we don't need them anymore
+        except KeyError:
+            self.notice('info', 'Feed {0} has no new articles'.format(feed['name']))
+            articles = None
         # verify that the feed exists and create if it doesn't
         if not self.__item_exists('feeds', 'id', feed['id']):
             self.__insert_feed(feed)
@@ -499,13 +514,11 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         self.conn.commit()
         cursor.close()
-        if feed.has_key('articles'):
-            for art in feed['articles']:
+        if articles:
+            for art in articles:
                 self.__insert_article(art)
-            self.__clean_up_feed(feed) # returns (total, unread, starred)
-        else:
-            self.notice('info', 'Feed {0} has no new articles'.format(feed['name']))
-    
+        self.__clean_up_feed(feed) # returns (total, unread, starred)
+
     ## Retreive (C*R*UD)
     def __get_feed(self, feed_id):
         cursor = self.conn.cursor()
@@ -525,7 +538,7 @@ class Engine (dbus.service.Object):
         cursor.execute('SELECT id,name FROM categories ORDER BY name ASC')
         rows = cursor.fetchall()
         for r in rows:
-            cat.append({'type':'category','id': r[0], 'name':r[1], 'count':'0'},)
+            cat.append({'type':'category','id': r[0], 'name':r[1], 'count':0},)
         cursor.close()
         return cat
     def __get_feeds_for(self, cid):
@@ -535,8 +548,8 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
-            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 'category_id':str(r[3])}
-            f['count'] = str(self.__count_unread_items(f))
+            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 'category_id':r[3]}
+            f['count'] = self.__count_unread_items(f)
             feeds.append(f)
         cursor.close()
         return feeds
@@ -644,7 +657,7 @@ class Engine (dbus.service.Object):
         This is where old feeds are removed.
         We only keep the last `max_entries` articles.
         """
-        self.log.debug("Cleaning up feed {0}".format(feed['name'])
+        self.log.debug("Cleaning up feed {0}".format(feed['name']))
         q = 'SELECT id FROM articles WHERE feed_id = "{0}" ORDER BY date DESC'.format(feed['id'])
         cursor = self.conn.cursor()
         cursor.execute(q)
@@ -656,12 +669,13 @@ class Engine (dbus.service.Object):
             while i <= total:
                 if i > self.__max_entries:
                     self.__delete_article(rows[i])
-                i += 1                    
-        self.notice('new', "{0} updated! (total:{1}, unread:{2}, starred:{3})".format(
+                i += 1
+        feed['count'] = self.__count_unread_items(feed)
+        self.feedupdate(feed)
+        self.notice('new', "{0} updated! (total:{1}, unread:{2})".format(
                         feed['name'], 
                         0, 
-                        self.__count_unread_items(feed), 
-                        self.__count_starred_items(feed)))
+                        feed['count']))
     
     def __timed_update(self, *args):
         self.log.debug("About to auto-update")
@@ -744,13 +758,13 @@ class Engine (dbus.service.Object):
         for r in rows:
             articles.append(
                 {
-                    'id':str(r[0]), 
-                    'read':str(r[1]), 
-                    'starred':str(r[2]),
+                    'id':r[0], 
+                    'read':r[1], 
+                    'starred':r[2],
                     'title':r[3], 
-                    'date':str(r[4]), 
+                    'date':r[4], 
                     'url':r[5], 
-                    'feed_id':str(r[6]), 
+                    'feed_id':r[6], 
                 }
             )
         return articles
@@ -771,6 +785,7 @@ class Engine (dbus.service.Object):
         return False
     def __init_database(self):
         """Do I have to say the words..."""
+        self.log.info("Initializing database")
         cursor = self.conn.cursor()
         cursor.executescript('''
             CREATE TABLE categories(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL);

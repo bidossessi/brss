@@ -80,7 +80,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.filterentry.connect("activate", self.__search_request)
         self.fbox = Gtk.HBox(spacing=3)
         self.fbox.pack_start(self.filterentry, True, True, 0)
-        store = Gtk.ListStore(str, bool, bool, str, str, str, int, str)
+        store = Gtk.ListStore(str, bool, bool, int, str, str, int, str)
         self.listview = Gtk.TreeView()
         self.listview.set_model(store)
         self.listview.connect("row-activated", self.__row_activated)
@@ -170,18 +170,11 @@ class ItemList (Gtk.VBox, GObject.GObject):
             return ""   
     def __format_date(self, column, cell, model, iter, col):
         cell.set_property('text', make_date(model.get_value(iter, 3)))
-    def __format_data(self, data):
-        """ Structure our data """
-        llist = []
-        for a in data:
-            llist.append(self.__format_row(a))
-        return llist
-
     def __format_row(self, a):
         r = (
                 a['id'],
-                int(a['read']),
-                int(a['starred']),
+                a['read'],
+                a['starred'],
                 a['date'],
                 a['title'],
                 a['url'],
@@ -195,9 +188,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
         store.clear()
         # store structure (id, read, starred, date, title, url, weight, feed_id)
         if data:
-            l = self.__format_data(data)
-            for art in l:
-                store.append(art)
+            for art in data:
+                store.append(self.__format_row(art))
             self.listview.set_model(store)
             self.emit('list-loaded')
         else:
@@ -264,8 +256,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
         if row:
             item = {
                 'id': row[0],
-                'read': bmap.get(row[1]),
-                'starred': bmap.get(row[2]),
+                'read': row[1],
+                'starred': row[2],
                 'title': row[4],
                 'url': row[5],
                 'feed_id': row[7],

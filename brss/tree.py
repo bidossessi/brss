@@ -154,7 +154,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             a['type'],
             a['id'],
             a['name'],
-            int(a.get('count')),
+            a.get('count'),
             gmap.get(a['id']) or gmap.get(a['type'])
             )
         return r
@@ -205,9 +205,9 @@ class Tree (Gtk.VBox, GObject.GObject):
             iter = model.iter_next(iter)
 
     def __update_count (self, model, iter, col, var, inverse=False):
-        pmap = {'0':-1, '1':+1}
+        pmap = {0:-1, 1:+1}
         if inverse:
-            pmap = {'0':+1, '1':-1}
+            pmap = {0:+1, 1:-1}
         ol = model.get_value(iter, col)
         nval = ol+pmap.get(var)
         model.set_value(iter, col, nval)
