@@ -664,11 +664,14 @@ class Engine (dbus.service.Object):
                         self.__count_starred_items(feed)))
     
     def __timed_update(self, *args):
+        self.log.debug("About to auto-update")
         now = time.time()
         timed = self.__last_update + self.__update_interval
         if now > timed and not self.__in_update:
-            self.log.debug("Running timed update")
+            self.log.debug("Running auto-update")
             self.__update_all()
+        else:
+            self.log.debug("Not auto-updating")
         return True
     
     def __toggle_article(self, col, item):
