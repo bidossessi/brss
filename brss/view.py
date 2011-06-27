@@ -27,12 +27,7 @@ from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import GObject
 from gi.repository import WebKit
-from datetime import datetime
-import locale
-
-def make_date(string):
-    date = datetime.fromtimestamp(int(string))
-    return date.strftime (locale.nl_langinfo(locale.D_FMT))
+from functions import make_date
     
 class View (Gtk.VBox, GObject.GObject):
     """
@@ -109,7 +104,7 @@ class View (Gtk.VBox, GObject.GObject):
     
     def clear(self, caller):
         self.link_button.set_label("No Article to show")
-        nd = "<html><h1>No data to show</h1></html>"""
+        nd = "<html><h1>No Article to show</h1></html>"""
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")
         #~ self.hide()
 

@@ -24,15 +24,11 @@
 from gi.repository import Gtk, GObject, Gdk
 Gdk.threads_init()
 import time
-import datetime
 import sqlite3
 import feedparser
-import htmlentitydefs
-import hashlib
 import urllib2
 import threading
 import os
-import hashlib
 import re
 import html5lib
 import dbus
@@ -43,17 +39,7 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 from xml.etree import ElementTree
 from Queue import Queue
 
-def make_time():
-    split = str(datetime.datetime.now()).split(' ')
-    ds = split[0].split('-')
-    ts = split[1].split(':')
-    t = datetime.datetime(int(ds[0]), int(ds[1]), int(ds[2]), int(ts[0]), int(ts[1]), int(float(ts[2])))
-    return time.mktime(t.timetuple())
-
-def make_uuid(data="fast random string", add_time=True):
-    if add_time:#make it REALLY unique
-        data = str(make_time())+str(data)
-    return hashlib.md5(data).hexdigest().encode("utf-8")
+from functions import make_time, make_uuid
 
 class FeedGetter(threading.Thread):
     """
@@ -425,21 +411,23 @@ class Engine (dbus.service.Object):
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.in_q = Queue()
         self.log = logger
-        self.__in_update = False
-        self.__last_update = False
-        self.__update_interval = 300 # TODO: get interval from config
-        self.__max_entries = 10 # TODO: get max from config
         # check
         try:
             self.__get_all_categories()
         except Exception, e:
             self.log.warning("Could not find database: {0}".format(e))
             self.__init_database()
+        self.__in_update = False
+        self.__last_update = False
+        self.__update_interval = self.__get_config('interval')
+        self.__max_entries = self.__get_config('max')
+        self.__use_tray = self.__get_config('tray')
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.brss', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/brss/Engine')
         self.log.debug("Starting {0}".format(self))
         Gdk.threads_add_timeout_seconds(0, self.__update_interval, self.__timed_update, None)
+        
     def __repr__(self):
         return "Engine"
     ## Create (*C*RUD)
@@ -792,12 +780,37 @@ class Engine (dbus.service.Object):
         self.log.info("Initializing database")
         cursor = self.conn.cursor()
         cursor.executescript('''
+            CREATE TABLE config(key varchar(32) PRIMARY KEY, value varchar(256) NOT NULL);
             CREATE TABLE categories(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL);
             CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL);
             CREATE TABLE articles(id varchar(256) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, url varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, feed_id integer NOT NULL);
             CREATE TABLE images(id integer PRIMARY KEY, name varchar(256) NOT NULL, url TEXT NOT NULL, article_id varchar(256) NOT NULL);
+            INSERT INTO config VALUES('max', '10');
+            INSERT INTO config VALUES('interval', '100');
+            INSERT INTO config VALUES('tray', '0');
+            INSERT INTO config VALUES('hide-read', '0');
             INSERT INTO categories VALUES('1', 'Uncategorized');
             ''')
+        self.conn.commit()
+        cursor.close()
+
+    def __get_config(self, key):
+        q = 'SELECT value FROM config WHERE key = "{0}"'.format(key)
+        cursor = self.conn.cursor()
+        cursor.execute(q)
+        row = cursor.fetchone()
+        cursor.close()
+        if row:
+            try:
+                return int(row[0])
+            except ValueError:
+                return row[0]
+        return False
+    
+    def __set_config(self, key, value):
+        q = 'UPDATE config SET value = {0} WHERE key = "{1}"'.format(value, key)
+        cursor = self.conn.cursor()
+        cursor.execute(q)
         self.conn.commit()
         cursor.close()
 
