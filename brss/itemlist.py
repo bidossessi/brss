@@ -24,12 +24,7 @@
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
-from datetime import datetime
-import locale
-
-def make_date(string):
-    date = datetime.fromtimestamp(int(string))
-    return date.strftime (locale.nl_langinfo(locale.D_FMT))
+from functions import make_date
 
 class ItemList (Gtk.VBox, GObject.GObject):
     """

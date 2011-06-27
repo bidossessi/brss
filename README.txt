@@ -1,19 +1,23 @@
-BRSS Offline RSS Reader version 0.1
------------------------------------
+=======
+ brss
+=======
 
-BRSS is a so-called 'offline' RSS readerheavily inspired by Naufrago!
+BRss is an 'offline' RSS reader written in Python.
+It is a complete rewrite of another python RSS reader (Naufrago!),
+but based on the concept of service/client. It uses the dbus library
+to enable communication between the service and clients.
 
-BRSS consists of two applications:
+Features:
+---------
 
-1- ENGINE.
-The BRSS engine runs in the background and publishes it's methods through
-DBus. The engine downloads feed articles into a SQLite database and 
-downloads remote images in a specified directories. 
-When an article is requested, the engine transparently replaces all remote 
-images' 'src' attributes with the local path.
-The engine polls feeds at a configurable interval, and can import 
-(and export) OPML files.
+BRss consists of two applications:
 
-2- FRONTEND
-BRSS also comes with a Gtk frontend that connects to a running engine, to 
-show feeds and articles previously downloaded.
+1. brss-engine
+brss-engine is a dbus service. Its main features are:
+    - periodically downloads feed articles, with their images
+    - notify on updates
+    - transparently replaces remote image tags on article request.
+    - search articles
+
+2. brss-reader
+brss-reader is a GTK+ client for brss-engine.

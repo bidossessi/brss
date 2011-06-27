@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 import os, sys, glob, platform
-from brss import __version__
+from brss.launcher import __version__
 
 data_files = []
 if platform.system() in ('Linux', 'SunOS'):
@@ -26,18 +26,24 @@ setup(
         "Environment :: GTK ",
         "Intended Audience :: End Users/Desktop",
         "Operating System :: POSIX",
+        "Licence :: OSI Approved :: GNU General Public License (GPL)",
         ],
     author='Bidossessi SODONON',
     author_email='bidossessi.sodonon@yahoo.fr',
     zip_safe=False,
-
+    requires=[
+        'dbus',
+        'sqlite3',
+        'feedparser',
+        'html5lib',
+        'xml',
+        'gi'
+        ],
     entry_points = {
-        'gui_scripts': [
-            'brss-reader = brss:run_frontend',
-            'brss-engine = brss:run_engine',
-            ],
+        'gui_scripts': ['brss-reader = brss.launcher:run_frontend'],
+        'console_scripts': ['brss-engine = brss.launcher:run_engine'],
        },
-    package_dir = {'client': 'coriolis/client'},
+    package_dir = {'brss': 'brss'},
     package_data = {},
     include_package_data = True,
     data_files = data_files
