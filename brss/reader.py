@@ -34,11 +34,9 @@ from itemlist   import ItemList
 from tree       import Tree
 from view       import View
 from status     import Status
-from pkg_resources import resource_filename
-def mkpath(type, file):
-    """Return a data file path"""
-    return resource_filename("brss", os.path.join(type,file))
-    
+from alerts     import Alerts
+from functions  import make_path    
+
 class Reader (Gtk.Window, GObject.GObject):
     """
         
@@ -218,9 +216,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.set_property("height-request", 700)
         self.set_property("width-request", 1024)
         self.is_fullscreen = False
-        self.set_title('DBus RSS')
-        self.set_icon_from_file(mkpath('icons','brss.svg'))
+        self.set_title('BRss')
+        self.set_icon_from_file(make_path('icons','brss.svg'))
         #~ self.set_default_icon(get_pixbuf())
+        self.alert = Alerts(self)
         self.show_all()
         
 
@@ -287,7 +286,6 @@ class Reader (Gtk.Window, GObject.GObject):
                 error_handler=self.__to_log)
     
     def __populate_menu(self, *args):
-        print "Populating menu"
         menu = self.get_menu_items()
         unread = self.count_unread()
         starred = self.count_starred()
@@ -329,9 +327,13 @@ class Reader (Gtk.Window, GObject.GObject):
             self.__to_clipboard(item['url'])
         
         elif name in ['Delete', 'Delete Feed', 'Delete Category']:
-            self.delete(item,
-                reply_handler=self.__populate_menu,
-                error_handler=self.__to_log)
+            self.alert.question("Are you sure you want to delete this {0}".format(item['type']),
+                "This action cannot be undone."
+                )
+            if self.alert.checksum:
+                self.delete(item,
+                    reply_handler=self.__populate_menu,
+                    error_handler=self.__to_log)
     def __search_articles(self, caller, string):
         self.search_for(string,
                 reply_handler=self.ilist.load_list,
@@ -393,8 +395,9 @@ class Reader (Gtk.Window, GObject.GObject):
     def run(self):
         Gtk.main()
 
-    def do_loaded(self, *args):
-        print "Reader loaded"
+    #~ def do_loaded(self, *args):
+        #~ print "Reader loaded"
+
 def main():
     app = Reader()
     app.run()
