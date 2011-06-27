@@ -25,6 +25,7 @@
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
+import pango
 import os
 from pkg_resources import resource_filename
 def mkpath(type, file):
@@ -107,12 +108,13 @@ class Tree (Gtk.VBox, GObject.GObject):
         msc.add(self.menuview)
         mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         self.pack_start(msc, True, True,0)
+        self.set_property("width-request", 300)
         menu = TreeMenu(self)
         self.current_item = None
         #~ self.__setup_dnd() #FIXME: DnD is broken
-        self.__setup_icons(mkpath('pixmaps','rss.png'), 'feed')
+        self.__setup_icons(mkpath('pixmaps','brss-feed.svg'), 'feed')
         self.__setup_icons(mkpath('pixmaps','logo2.svg'), 'logo')
-        self.__setup_icons(mkpath('pixmaps','feed-missing.svg'), 'missing')
+        self.__setup_icons(mkpath('pixmaps','brss-feed-missing.svg'), 'missing')
         self.__setup_icons(mkpath('pixmaps','starred.svg'), 'starred')
         self.__connect_signals()
         
@@ -150,25 +152,25 @@ class Tree (Gtk.VBox, GObject.GObject):
             name2 = model.get_value(iter2, 2)
         #3. put general on top
         if id1 == "1":
-            print "pushing {0} above {1}".format(name1, name2)
+            #~ print "pushing {0} above {1}".format(name1, name2)
             return -1
         if id2 == "1":
-            print "pushing {1} above {0}".format(name1, name2)
+            #~ print "pushing {1} above {0}".format(name1, name2)
             return 1
         #~ # finally sort by string
         if tp1 < tp2:
-            print "pushing {0} above {1}".format(name1, name2)
+            #~ print "pushing {0} above {1}".format(name1, name2)
             return -1
         if tp1 > tp2:
-            print "pushing {0} below {1}".format(name1, name2)
+            #~ print "pushing {0} below {1}".format(name1, name2)
             return -1
         if name1 < name2:
-            print "pushing {0} above {1}".format(name1, name2)
+            #~ print "pushing {0} above {1}".format(name1, name2)
             return -1
         if name1 > name2:
-            print "pushing {0} below {1}".format(name1, name2)
+            #~ print "pushing {0} below {1}".format(name1, name2)
             return 1
-        print "not comparing".format(name1, name2)     
+        #~ print "not comparing".format(name1, name2)     
         return 0
         #.now we can compare between text attributes
         
@@ -209,9 +211,10 @@ class Tree (Gtk.VBox, GObject.GObject):
         else:
            cell.set_property("text",name)
         cell.set_property("weight", self.__get_weight(int(count)))
+        cell.set_property("ellipsize", pango.ELLIPSIZE_END)
     
     def __format_row(self, a):
-        gmap = {'feed':'gtk-file', 'category':'gtk-directory'}
+        gmap = {'feed':'missing', 'category':'gtk-directory'}
         # icon
         try:
             stock = self.__setup_icons(os.path.join(self.favicon_path, a['id']), a['id'])
@@ -374,7 +377,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         
     # convenience
     def do_item_selected(self, item):
-        print 'Item selected: ', item
+        #~ print 'Item selected: ', item
         if item['type'] in ['starred', 'unread']:
             self.menuselect.unselect_all()
         elif item['type'] in ['feed', 'category']:
