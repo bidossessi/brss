@@ -27,10 +27,7 @@ from gi.repository import Gdk
 from gi.repository import GObject
 import pango
 import os
-from pkg_resources import resource_filename
-def mkpath(type, file):
-    """Return a data file path"""
-    return resource_filename("brss", os.path.join(type,file))
+from functions import make_path
 
 class Tree (Gtk.VBox, GObject.GObject):
     """ The Tree handles feeds and categories management. """
@@ -112,10 +109,10 @@ class Tree (Gtk.VBox, GObject.GObject):
         menu = TreeMenu(self)
         self.current_item = None
         #~ self.__setup_dnd() #FIXME: DnD is broken
-        self.__setup_icons(mkpath('pixmaps','brss-feed.svg'), 'feed')
-        self.__setup_icons(mkpath('pixmaps','logo2.svg'), 'logo')
-        self.__setup_icons(mkpath('pixmaps','brss-feed-missing.svg'), 'missing')
-        self.__setup_icons(mkpath('pixmaps','starred.svg'), 'starred')
+        self.__setup_icons(make_path('pixmaps','brss-feed.svg'), 'feed')
+        self.__setup_icons(make_path('pixmaps','logo2.svg'), 'logo')
+        self.__setup_icons(make_path('pixmaps','brss-feed-missing.svg'), 'missing')
+        self.__setup_icons(make_path('pixmaps','starred.svg'), 'starred')
         self.__connect_signals()
         
     def __connect_signals(self):
@@ -234,6 +231,27 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.sselect.unselect_all()
         self.menuselect.unselect_all()
         self.current_item = None
+
+    def next_item(self, *args):
+        model, iter = self.menuselect.get_selected()
+        if model.get_value(iter, 0)=="category":
+            #select the first child
+            iter = model.iter_children(iter)
+        if iter:
+            niter = model.iter_next(iter)
+            try: self.menuselect.select_iter(niter)
+            except: pass
+    
+    def previous_item(self, *args): #FIXME: doesn't work
+        model, iter = self.menuselect.get_selected()
+        if model.get_value(iter, 0)=="category":
+            #select the first child
+            iter = model.iter_children(iter)
+        if iter:
+            s = model.get_string_from_iter(iter)
+            if int(s) > 0:
+                niter = model.get_iter_from_string(str(int(s)-1))
+                self.menuselect.select_iter(niter)
         
     def __search(self, col, value, model=None):
         """
@@ -310,7 +328,6 @@ class Tree (Gtk.VBox, GObject.GObject):
             gmap = {0:+1, 1:-1}# invert handling
         n = gmap.get(var) or var
         nval = ol + n # increment
-        print "setting col {0} to {1}".format(col, nval)
         model.set_value(iter, col, nval)
         
     def __make_special_folders(self, unread, starred):

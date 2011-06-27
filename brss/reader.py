@@ -137,6 +137,11 @@ class Reader (Gtk.Window, GObject.GObject):
                      <menuitem action='Update all'/>
                     </menu>
                     <menu action='ViewMenu'>
+                     <menuitem action='NextArticle'/>
+                     <menuitem action='PreviousArticle'/>
+                     <menuitem action='NextFeed'/>
+                     <menuitem action='PreviousFeed'/>
+                    <separator />
                      <menuitem action='FullScreen'/>
                     </menu>
                     <menu action='HelpMenu'>
@@ -150,8 +155,10 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Update all' action='Update all'/>
                     <toolitem name='Stop' action='Stop update'/>
                     <separator name='sep2'/>
-                    <toolitem name='Previous' action='Previous'/>
-                    <toolitem name='Next' action='Next'/>
+                    <toolitem name='PreviousFeed' action='PreviousFeed'/>
+                    <toolitem name='PreviousArticle' action='PreviousArticle'/>
+                    <toolitem name='NextArticle' action='NextArticle'/>
+                    <toolitem name='NextFeed' action='NextFeed'/>
                     <separator name='sep3'/>
                     <toolitem name='FullScreen' action='FullScreen'/>
                     <toolitem name='Search' action='Search'/>
@@ -168,7 +175,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Adds a feed'),
                 ('New category', "gtk-directory", 'New _category', '<alt>C', 'Adds a category'),
-                ('Delete', "gtk-clear", 'Delete', None, 'Deletes a feed or a category'),
+                ('Delete', "gtk-clear", 'Delete', 'Delete', 'Deletes a feed or a category', self.__delete),
                 ('Import feeds', "gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.import_feeds),
                 ('Export feeds', "gtk-undo", 'Export feeds', None, 'Exports a feedlist'),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
@@ -178,8 +185,10 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('NetworkMenu', None, '_Network'),
                 ('Update', None, '_Update', '<control>U', 'Updates the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
-                ('Previous', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous_article),
-                ('Next', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next_article),
+                ('PreviousArticle', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous_article),
+                ('NextArticle', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next_article),
+                ('PreviousFeed', "gtk-goto-first", 'Previous Feed', '<control><shift>b', 'Go to the previous news feed', self.__previous_feed),
+                ('NextFeed', "gtk-goto-last", 'Next Feed', '<control><shift>n', 'Go to the next news feed', self.__next_feed),
                 ('Stop update', "gtk-stop", 'Stop', None, 'Stop update'),
                 ('ViewMenu', None, '_View'),
                 ('HelpMenu', None, '_Help'),
@@ -228,6 +237,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.connect('loaded', self.__populate_menu)
         self.connect('next-article', self.ilist.next_item)
         self.connect('previous-article', self.ilist.previous_item)
+        self.connect('next-feed', self.tree.next_item)
+        self.connect('previous-feed', self.tree.previous_item)
         self.connect('search-toggled', self.ilist.toggle_search)
         self.tree.connect('item-selected', self.__load_articles)
         self.tree.connect('dcall-request', self.__handle_dcall)
@@ -302,6 +313,8 @@ class Reader (Gtk.Window, GObject.GObject):
     
     def __update_feed(self, *args):
         self.__handle_dcall(self, 'Update', self.tree.current_item)
+    def __delete(self, *args):
+        self.__handle_dcall(self, 'Delete', self.tree.current_item)
     def __update_all(self, *args):
         self.__handle_dcall(self, 'Update', 'all')
     def __load_article(self, ilist, item):
