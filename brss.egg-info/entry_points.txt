@@ -1,4 +1,0 @@
-[gui_scripts]
-brss-reader = brss:run_frontend
-brss-engine = brss:run_engine
-
