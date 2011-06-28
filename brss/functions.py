@@ -33,9 +33,9 @@ def make_date(string):
     date = datetime.fromtimestamp(int(string))
     return date.strftime (locale.nl_langinfo(locale.D_FMT))
 
-def make_path(type, file):
-    """Return a data file path"""
-    return resource_filename("brss", os.path.join(type,file))
+def make_path(type, opml):
+    """Return a data opml path"""
+    return resource_filename("brss", os.path.join(type,opml))
 
 def make_time():
     split = str(datetime.now()).split(' ')

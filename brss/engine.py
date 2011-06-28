@@ -75,7 +75,7 @@ class FeedGetter(threading.Thread):
         else:
             feed['name'] = feed['url'].encode('utf-8')
         if not feed.has_key('category'):
-            feed['category'] = '1'
+            feed['category'] = 'uncategorized'
         if not feed.has_key('id'):
             feed['id'] = make_uuid(feed['url'])
         # update basic feed informations
@@ -257,8 +257,6 @@ class Engine (dbus.service.Object):
                 self.__delete_feed(feed)
             elif item['type'] == 'category':
                 self.__delete_category(item)
-            self.notice('warning', "[{0}] {1} deleted!".format(
-                        item['type'].capitalize(), item['name'].encode('utf-8')))
     ## 2. Menu
     @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def get_menu_items(self):
@@ -308,11 +306,35 @@ class Engine (dbus.service.Object):
         return self.__swap_image_tags(article)
 
     @dbus.service.method('com.itgears.brss')
+    def export_opml(self, filename):
+        """Export feeds and categories to an OPML file."""
+        opml = open(os.path.abspath(filename), 'w')
+        opml.writelines('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
+        opml.writelines('<opml version="1.0">\n')
+        opml.writelines('\t<title>BRss Feed List</title>\n')
+        opml.writelines('\t<head></head>\n')
+        opml.writelines('\t<body>\n')
+        cats = self.__get_all_categories()
+        for c in cats:
+            opml.writelines('\t\t<outline title="{0}" text="{0}" description="{0}" type="folder">\n'.format(
+                c['name']))
+            feeds = self.__get_feeds_for(c['id'])
+            for f in feeds:
+                opml.writelines('\t\t\t<outline title="{0}" text="{0}" type="rss" xmlUrl="{1}"/>\n'.format(
+                    f['name'].replace('&', '%26').encode('utf-8'),
+                    f['url'].replace('&', '%26')))
+            opml.writelines('\t\t</outline>\n')
+        opml.writelines('\t</body>\n')
+        opml.writelines('</opml>\n')
+        opml.flush()
+        opml.close()
+
+    @dbus.service.method('com.itgears.brss')
     def import_opml(self, filename):
         """Import feeds and categories from an OPML file."""
         f = open(os.path.abspath(filename), 'r')
         tree = ElementTree.parse(f)
-        current_category = '1'
+        current_category = 'uncategorized'
         cursor = self.conn.cursor()
         for node in tree.getiterator('outline'):
             name = node.attrib.get('text').replace('[','(').replace(']',')')
@@ -351,21 +373,15 @@ class Engine (dbus.service.Object):
         self.__toggle_article('read', item)
 
     @dbus.service.method('com.itgears.brss')
-    def count_unread(self):
+    def count_special(self):
         """
         Count all unread articles.
         Return a string.
         """
-        return self.__count_unread_items()
+        u = self.__count_unread_items() 
+        s = self.__count_starred_items()
+        return u, s
 
-    @dbus.service.method('com.itgears.brss')
-    def count_starred(self):
-        """
-        Count all unread articles.
-        Return a string.
-        """
-        return self.__count_starred_items()
-    
     ## 5. Signals
     @dbus.service.signal('com.itgears.brss', signature='ss')
     def warning (self, wtype, message):
@@ -407,7 +423,7 @@ class Engine (dbus.service.Object):
     def __init__(self, logger, base_path="."):
         self.base_path = base_path
         self.images_path = os.path.join(base_path, 'images')
-        self.db_path = os.path.join(base_path, 'feed.db')
+        self.db_path = os.path.join(base_path, 'brss.db')
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.in_q = Queue()
         self.log = logger
@@ -529,7 +545,7 @@ class Engine (dbus.service.Object):
         cursor.execute('SELECT id,name FROM categories ORDER BY name ASC')
         rows = cursor.fetchall()
         for r in rows:
-            cat.append({'type':'category','id': r[0], 'name':r[1], 'count':0},)
+            cat.append({'type':'category','id': r[0], 'name':r[1], 'count':0, 'url':'none', 'category':r[0]},)
         cursor.close()
         return cat
     def __get_feeds_for(self, cid):
@@ -540,7 +556,7 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
-            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 'category_id':r[3]}
+            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 'category':r[3]}
             f['count'] = self.__count_unread_items(f)
             feeds.append(f)
         cursor.close()
@@ -603,11 +619,15 @@ class Engine (dbus.service.Object):
         feeds = self.__get_feeds_for(category['id'])
         for f in feeds:
             self.__delete_feed(f)
-        q = 'DELETE FROM categories WHERE id = "{0}"'.format(category['id'])
-        cursor = self.conn.cursor()        
-        cursor.execute(q)
-        self.conn.commit()
-        cursor.close()
+        if not category['id'] == 'uncategorized':
+            q = 'DELETE FROM categories WHERE id = "{0}"'.format(category['id'])
+            cursor = self.conn.cursor()        
+            cursor.execute(q)
+            self.conn.commit()
+            cursor.close()
+            self.notice('warning', "Category {0} deleted!".format(category['name'].encode('utf-8')))
+        else:
+            self.notice('warning', "All uncategorized feeds deleted!")
     def __delete_feed(self, feed):
         articles = self.get_articles_for(feed)
         if articles:
@@ -623,6 +643,7 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         self.conn.commit()
         cursor.close()    
+        self.notice('warning', "[Feed] {0} deleted!".format(feed['name'].encode('utf-8')))
     def __delete_article(self, art_id):
         # delete images first.
         cursor = self.conn.cursor()
@@ -789,7 +810,7 @@ class Engine (dbus.service.Object):
             INSERT INTO config VALUES('interval', '100');
             INSERT INTO config VALUES('tray', '0');
             INSERT INTO config VALUES('hide-read', '0');
-            INSERT INTO categories VALUES('1', 'Uncategorized');
+            INSERT INTO categories VALUES('uncategorized', 'Uncategorized');
             ''')
         self.conn.commit()
         cursor.close()

@@ -57,8 +57,8 @@ class Tree (Gtk.VBox, GObject.GObject):
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)
-        #store (type,id,name,count,stock-id) 
-        self.store = Gtk.TreeStore(str, str, str, int, str)
+        #store (type,id,name,count,stock-id, url, category_id) 
+        self.store = Gtk.TreeStore(str, str, str, int, str, str, str)
         self.store.set_sort_func(2, self.__sort_type, 0)
         #~ self.store.set_default_sort_func(self.__sort_type, 0)
         self.store.set_sort_column_id(2, Gtk.SortType.ASCENDING)
@@ -148,10 +148,10 @@ class Tree (Gtk.VBox, GObject.GObject):
             name1 = model.get_value(iter1, 2)
             name2 = model.get_value(iter2, 2)
         #3. put general on top
-        if id1 == "1":
+        if id1 == "uncategorized":
             #~ print "pushing {0} above {1}".format(name1, name2)
             return -1
-        if id2 == "1":
+        if id2 == "uncategorized":
             #~ print "pushing {1} above {0}".format(name1, name2)
             return 1
         #~ # finally sort by string
@@ -223,7 +223,9 @@ class Tree (Gtk.VBox, GObject.GObject):
             a['id'],
             a['name'],
             a.get('count'),
-            gmap.get(a['id']) or gmap.get(a['type'])
+            gmap.get(a['id']) or gmap.get(a['type']),
+            a.get('url'),
+            a.get('category'),
             )
         return r
         
@@ -330,15 +332,16 @@ class Tree (Gtk.VBox, GObject.GObject):
         nval = ol + n # increment
         model.set_value(iter, col, nval)
         
-    def __make_special_folders(self, unread, starred):
+    def make_special_folders(self, unread, starred):
         self.sstore.clear()
         u = ('unread', '0','Unread', unread, 'gtk-new')
         s = ('starred', '0', 'Starred', starred, 'gtk-about')
         self.sstore.append(None, u)
         self.sstore.append(None, s)
+        self.emit('list-loaded')
 
 
-    def fill_menu(self, data, unread, starred):
+    def fill_menu(self, data):
         """Load the given data into the left menuStore"""
         # return the first iter
         self.store.clear()
@@ -349,9 +352,7 @@ class Tree (Gtk.VBox, GObject.GObject):
                     row = self.store.append(None, self.__format_row(item))
                 if item['type'] == 'feed':
                     self.store.append(row, self.__format_row(item))
-        self.__make_special_folders(unread, starred)
         self.menuview.expand_all()
-        self.emit('list-loaded')
 
     def insert_row(self, item):
         # start with categories:
