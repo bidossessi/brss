@@ -114,7 +114,6 @@ class Dialog(Gtk.Dialog):
         tpid = 0
         
         for widget in widget_list:
-            print widget
             header = self.__make_header(widget.header)
             if type(widget) == CheckBtn:
                 box.attach(widget, lpid, lpid+1, tpid, tpid+1, Gtk.AttachOptions.FILL|Gtk.AttachOptions.EXPAND, Gtk.AttachOptions.FILL)
@@ -151,7 +150,6 @@ def main():
         ]
     d = Dialog(window, 'test', args)
     d.run()
-    print d.response
     d.destroy()
     Gtk.main()
 

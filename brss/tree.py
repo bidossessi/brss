@@ -21,7 +21,6 @@
 #       MA 02110-1301, USA.
 #       
 #       
-#FIXME: DnD is broken!!!
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
@@ -65,7 +64,6 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menuview = Gtk.TreeView()
         self.menuview.set_model(self.store)
         self.menuview.set_headers_visible(False)
-        #TODO: set automatic sorting
         col = Gtk.TreeViewColumn()
         textcell = Gtk.CellRendererText()
         iconcell = Gtk.CellRendererPixbuf()
@@ -82,7 +80,6 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.sview = Gtk.TreeView()
         self.sview.set_model(self.sstore)
         self.sview.set_headers_visible(False)
-        #TODO: set automatic sorting
         col = Gtk.TreeViewColumn()
         textcell = Gtk.CellRendererText()
         iconcell = Gtk.CellRendererPixbuf()
@@ -108,7 +105,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.set_property("width-request", 300)
         menu = TreeMenu(self)
         self.current_item = None
-        #~ self.__setup_dnd() #FIXME: DnD is broken
+        #~ self.__setup_dnd() #FIXME: DnD is broken !!!
         self.__setup_icons(make_path('pixmaps','brss-feed.svg'), 'feed')
         self.__setup_icons(make_path('pixmaps','logo2.svg'), 'logo')
         self.__setup_icons(make_path('pixmaps','brss-feed-missing.svg'), 'missing')
@@ -281,7 +278,6 @@ class Tree (Gtk.VBox, GObject.GObject):
 
     def refresh_unread_counts(self, item):
         # we need the increment
-        print "refreshing", item['name']
         iter = self.__search(1, item['id'])
         if iter:
             ori = self.store.get_value(iter, 3) # original
@@ -395,7 +391,6 @@ class Tree (Gtk.VBox, GObject.GObject):
         
     # convenience
     def do_item_selected(self, item):
-        #~ print 'Item selected: ', item
         if item['type'] in ['starred', 'unread']:
             self.menuselect.unselect_all()
         elif item['type'] in ['feed', 'category']:
@@ -468,33 +463,3 @@ class TreeMenu(Gtk.Menu):
         elif event.type == Gdk.EventType.KEY_RELEASE:
             if event.keyval == 65383: # Menu
                 self.popup(event, self._tree.current_item)
-
-
-if __name__ == '__main__':
-    
-    def callback(ilist, item, method):
-        print method(item)
-
-    import dbus
-    import dbus.mainloop.glib
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
-    bus                 = dbus.SessionBus()
-    engine              = bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
-    get_menu_items      = self.engine.get_dbus_method('get_menu_items', 'com.itgears.brss')
-    exit                = engine.get_dbus_method('exit', 'com.itgears.brss')
-    
-    cats = get_menu_items()
-    window = Gtk.Window()
-    window.connect("destroy", Gtk.main_quit)
-    window.set_default_size(400, 600)
-    tree = Tree()
-    window.add(tree)
-    window.show_all()
-    tree.fill_menu(cats)
-    tree.connect('item-selected', callback, get_articles_for)
-    Gtk.main()
-    
-    def quit():
-        Gtk.main_quit()
-        exit()

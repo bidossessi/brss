@@ -25,10 +25,13 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import GObject
+from gi.repository import GLib
 import dbus
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 import os
+import subprocess
+import time
 # our stuff
 from itemlist   import ItemList
 from tree       import Tree
@@ -36,7 +39,7 @@ from view       import View
 from status     import Status
 from alerts     import Alerts
 from dialogs    import Dialog
-from functions  import make_path
+from functions  import make_path, make_pixbuf
 
 class Reader (Gtk.Window, GObject.GObject):
     """
@@ -64,6 +67,10 @@ class Reader (Gtk.Window, GObject.GObject):
             None,
             ()),            
         "previous-feed" : (
+            GObject.SignalFlags.RUN_FIRST, 
+            None,
+            ()),            
+        "no-engine" : (
             GObject.SignalFlags.RUN_FIRST, 
             None,
             ()),            
@@ -193,7 +200,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('Stop update', "gtk-stop", 'Stop', None, 'Stop update'),
                 ('ViewMenu', None, '_View'),
                 ('HelpMenu', None, '_Help'),
-                ('About', "gtk-about", '_About', None, 'About'),
+                ('About', "gtk-about", '_About', None, 'About', self.__about),
                 ]
         tactions = [
                 ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__toggle_search),
@@ -215,12 +222,15 @@ class Reader (Gtk.Window, GObject.GObject):
         pane = Gtk.HPaned()
         pane.pack1(self.tree)
         pane.pack2(opane)
+        al = Gtk.Alignment.new(0.5,0.5,1,1)
+        al.set_padding(3,3,3,3)
+        al.add(pane)
         box = Gtk.VBox(spacing=3)
         box.pack_start(self.ui.get_widget('/Menubar'), False, True, 0)
         box.pack_start(self.ui.get_widget('/Toolbar'), False, True, 0)
         widget = self.ui.get_widget("/Toolbar/Stop")
         widget.set_sensitive(False)
-        box.pack_start(pane, True, True, 0)
+        box.pack_start(al, True, True, 0)
         box.pack_start(self.status, False, False, 0)
         self.add(box)
         self.set_property("height-request", 700)
@@ -241,7 +251,9 @@ class Reader (Gtk.Window, GObject.GObject):
         self.connect('next-feed', self.tree.next_item)
         self.connect('previous-feed', self.tree.previous_item)
         self.connect('search-toggled', self.ilist.toggle_search)
+        self.connect_after('no-engine', self.__no_engine)
         self.tree.connect('item-selected', self.__load_articles)
+        self.tree.connect_after('item-selected', self.__feed_selected)
         self.tree.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('item-selected', self.__load_article)
         self.ilist.connect('item-selected', self.__update_title)
@@ -255,10 +267,9 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect('search-requested', self.tree.deselect)
         self.view.connect('article-loaded', self.ilist.mark_read)
         self.view.connect('link-clicked', self.__to_browser)
-        self.view.connect('link-hovered', self.__status_info)
+        self.view.connect('link-hovered-in', self.__status_info)
+        self.view.connect('link-hovered-out', self.__status_info)
         self.engine.connect_to_signal('notice', self.status.message)
-        #~ self.engine.connect_to_signal('added', self.__populate_menu)
-        self.engine.connect_to_signal('added', self.status.message)
         self.engine.connect_to_signal('newitem', self.tree.insert_row)
         self.engine.connect_to_signal('feedupdate', self.tree.refresh_unread_counts)
         # might want to highlight these a bit more
@@ -362,6 +373,37 @@ class Reader (Gtk.Window, GObject.GObject):
         #~ item['category'] = self.tree.current_item['category']
         d.destroy()
         self.__create(item)
+    
+    def __about(self, *args):
+        """Shows the about message dialog"""
+        from brss import __version__, __maintainers__
+        LICENSE = """   
+            This program is free software: you can redistribute it and/or modify
+            it under the terms of the GNU General Public License as published by
+            the Free Software Foundation, either version 3 of the License, or
+            (at your option) any later version.
+
+            This program is distributed in the hope that it will be useful,
+            but WITHOUT ANY WARRANTY; without even the implied warranty of
+            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+            GNU General Public License for more details.
+
+            You should have received a copy of the GNU General Public License
+            along with this program.  If not, see <http://www.gnu.org/licenses/>.
+            """
+        about = Gtk.AboutDialog()
+        about.set_transient_for(self)
+        about.set_program_name("BRss")
+        about.set_version(__version__)
+        about.set_authors(__maintainers__)
+        about.set_artists(__maintainers__)
+        about.set_copyright("(c) 2011 ITGears")
+        about.set_license(LICENSE)
+        about.set_comments("BRss is an offline DBus-based RSS reader")
+        about.set_logo(make_pixbuf('brss'))
+        about.run()
+        about.destroy()
+
     def __create(self, item):
         self.create(item,
             reply_handler=self.__to_log,
@@ -442,19 +484,22 @@ class Reader (Gtk.Window, GObject.GObject):
         self.__toggle_stop()
     def __update_title(self, caller, item):
         self.set_title(item['title'])
-    def __status_info(self, caller, message):
-        print message
-        self.status.message('info', message)
-        
+    def __status_info(self, caller, message=None):
+        if message:
+            self.status.message('info', message)
+        else:
+            self.status.clear()
     def __to_log(self, *args):
-        print 'Log: ', args
+        for a in args:
+            print 'Log: ', a, type(a)
+            if type(a) == dbus.exceptions.DBusException:
+                self.emit('no-engine')
     
     def __to_browser(self, caller, link):
-        # try the config
-        print link
-        # fallback to default
+        orig_link = self.view.link_button.get_uri()
         self.view.link_button.set_uri(link)
         self.view.link_button.activate()
+        self.view.link_button.set_uri(orig_link)
         
     def __previous_article(self, *args):
         self.emit('previous-article')
@@ -482,18 +527,31 @@ class Reader (Gtk.Window, GObject.GObject):
             self.fullscreen()
             self.is_fullscreen = True
     
+    def __no_engine(self, *args):
+        self.status.message('error', "Cannot connect to the Feed Engine")
+    def __feed_selected(self, caller, item):
+        if item['type'] in ['feed', 'category']:
+            self.status.message('info', "[{0}] {1}".format(
+                item['type'].capitalize(),
+                item['name'].encode('utf-8')))
+        else:
+            self.status.clear()
     def quit(self, *args):
         Gtk.main_quit()
     
-    def run(self):
+    def start(self):
         Gtk.main()
 
     #~ def do_loaded(self, *args):
         #~ print "Reader loaded"
 
+    def do_next_feed(self, *args):
+        self.alert.error("Couldn't connect to the Feed Engine",
+            "BRss will now quit.\nPlease make sure that brss-engine is running and restart the application.")
+
 def main():
     app = Reader()
-    app.run()
+    app.start()
     
 if __name__ == '__main__':
     main()

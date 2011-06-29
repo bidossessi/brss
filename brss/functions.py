@@ -28,14 +28,15 @@ import os
 import locale
 import hashlib
 import time
+from gi.repository import GdkPixbuf
 
 def make_date(string):
     date = datetime.fromtimestamp(int(string))
     return date.strftime (locale.nl_langinfo(locale.D_FMT))
 
-def make_path(type, opml):
+def make_path(type, filename):
     """Return a data opml path"""
-    return resource_filename("brss", os.path.join(type,opml))
+    return resource_filename("brss", os.path.join(type,filename))
 
 def make_time():
     split = str(datetime.now()).split(' ')
@@ -43,6 +44,18 @@ def make_time():
     ts = split[1].split(':')
     t = datetime(int(ds[0]), int(ds[1]), int(ds[2]), int(ts[0]), int(ts[1]), int(float(ts[2])))
     return time.mktime(t.timetuple())
+
+def get_pixmap(fname):
+    """Returns a pixmap file included with brss"""
+    return make_path("pixmaps", fname)
+
+def make_pixbuf(name='brss', size=128):
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(
+        get_pixmap("{0}.svg".format(name)), size, size)
+
+#~ def make_pixbuf(name='brss'):
+    #~ return GdkPixbuf.Pixbuf.new_from_file(
+        #~ get_pixmap("{0}.svg".format(name)))
 
 def make_uuid(data="fast random string", add_time=True):
     if add_time:#make it REALLY unique

@@ -31,10 +31,10 @@ try:
     create(f)
     f = {'type':'feed','url': 'http://localhost/~b_sodonon/marketing-dz.com/rss.php?category=home'}
     create(f)
-    #~ update('all'),
-        #~ reply_handler=log,
-        #~ error_handler=log)
+    update('all',
+        reply_handler=log,
+        error_handler=log)
     print get_menu_items()
 except Exception, e:
     print e
-exit()
+#~ exit()

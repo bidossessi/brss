@@ -23,7 +23,7 @@
 #       
 from setuptools import setup, find_packages
 import os, sys, glob, platform
-from brss.launcher import __version__
+from brss import __version__, __maintainers__
 
 data_files = []
 if platform.system() in ('Linux', 'SunOS'):
@@ -51,7 +51,7 @@ setup(
         "Operating System :: POSIX",
         "Licence :: OSI Approved :: GNU General Public License (GPL)",
         ],
-    author='Bidossessi SODONON',
+    author=__maintainers__,
     author_email='bidossessi.sodonon@yahoo.fr',
     zip_safe=False,
     requires=[

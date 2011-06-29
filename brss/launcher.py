@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       brss
+#       launcher.py
 #       
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
@@ -32,7 +32,6 @@ from reader import Reader
 from engine import Engine
 from logger import Logger
 
-__version__ = '0.2'
 home = os.getenv("HOME")
 BASE_PATH = os.path.join(home,'.config','brss')
 def check_path():
@@ -56,7 +55,7 @@ def run_engine():
     else:
         log = Logger(BASE_PATH)
         engine = Engine(log, BASE_PATH)
-        engine.run()
+        engine.start()
 
 def run_frontend():
     max = 5
@@ -69,6 +68,6 @@ def run_frontend():
         i +=1
     if check_engine():
         reader = Reader(BASE_PATH)
-        reader.run()
+        reader.start()
     else:
         print "Couldn't start engine"

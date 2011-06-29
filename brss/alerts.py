@@ -63,19 +63,17 @@ class Alerts:
             self.win,
             Gtk.DialogFlags.MODAL|Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.ERROR,
-            Gtk.ButtonsType.CANCEL,
+            Gtk.ButtonsType.CLOSE,
             msg
             )
         if mmsg:
             diag.format_secondary_text(mmsg)
         diag.connect('response', self.diag_response)
         diag.run()
-    
-    def confirm(self, *args, **kwargs):
-        self.question(u"Confirmer l'opération")
-        
+            
     def diag_response(self, dialog, response):
-        """Stub. to override when needed."""        
+        """Stub. to override when needed."""
+        print "Alert response: ", response        
         if response == Gtk.ResponseType.CLOSE:
             pass
         elif response == Gtk.ResponseType.YES:
@@ -86,5 +84,5 @@ class Alerts:
         elif response == Gtk.ResponseType.CANCEL:
             #~ if hasattr(self, 'checksum'):
                 self.checksum = False
-        dialog.destroy()
         self.reset_checksum()
+        dialog.destroy()

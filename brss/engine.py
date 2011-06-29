@@ -21,9 +21,10 @@
 #       MA 02110-1301, USA.
 #       
 #       
-from gi.repository import Gtk, GObject, Gdk
+from gi.repository import Gtk, Gdk, Notify
 Gdk.threads_init()
 import time
+import datetime
 import sqlite3
 import feedparser
 import urllib2
@@ -39,7 +40,7 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 from xml.etree import ElementTree
 from Queue import Queue
 
-from functions import make_time, make_uuid
+from functions import make_time, make_uuid, make_path
 
 class FeedGetter(threading.Thread):
     """
@@ -67,8 +68,13 @@ class FeedGetter(threading.Thread):
         Fetch informations and articles for a feed.
         Returns the feed.
         """
-        time.sleep(2)
-        f = feedparser.parse(feed['url'])
+        #~ time.sleep(2)
+        try:
+            f = feedparser.parse(feed['url'])
+        except Exception, e:
+            self.log.warning(e)
+            self.result = feed
+            return
         # get (or set default) infos from feed
         if(hasattr(f.feed,'title')):
             feed['name'] = f.feed.title.encode('utf-8')
@@ -78,6 +84,8 @@ class FeedGetter(threading.Thread):
             feed['category'] = 'uncategorized'
         if not feed.has_key('id'):
             feed['id'] = make_uuid(feed['url'])
+        # set a new timestamp
+        feed['timestamp'] = time.time()
         # update basic feed informations
         bozo_invalid = ['urlopen', 'Document is empty'] # Custom non-wanted bozos
         if hasattr(f.feed, 'link'):
@@ -115,7 +123,7 @@ class FeedGetter(threading.Thread):
                         article['images'].append(local_image)
                 feed['articles'].append(article)
         
-        print "Feed {0} fetched".format(feed['name'])
+        self.log.debug("Feed {0} fetched".format(feed['name'].encode('utf-8')))
         self.result = feed
     def __fetch_remote_image(self, src, article_id):
         """Get a article image and write it to a local file."""
@@ -176,7 +184,8 @@ class FeedGetter(threading.Thread):
         try:
             dp = feed_item.date_parsed
             secs = time.mktime(datetime.datetime(dp[0], dp[1], dp[2], dp[3], dp[4], dp[5], dp[6]).timetuple())
-        except:
+        except Exception, e:
+            self.log.warning(e)
             secs = make_time()
         title = 'Without title'
         if hasattr(feed_item,'title'):
@@ -186,8 +195,8 @@ class FeedGetter(threading.Thread):
         if hasattr(feed_item,'content'):
             try:
                 content = feed_item.content[0].get('value').encode("utf-8")
-            except:
-                pass
+            except Exception, e:
+                self.log.warning(e)
         else:
             if hasattr(feed_item,'description'):
                 if feed_item.description is not None:
@@ -346,6 +355,7 @@ class Engine (dbus.service.Object):
                     self.create({'type':'category','name':name})
                     current_category = self.__get_category(name)['id']
         self.notice('ok', 'Feeds imported!')
+        self.__notify_update()
     
     @dbus.service.method('com.itgears.brss', out_signature='aa{sv}')
     def search_for(self, string):
@@ -360,8 +370,8 @@ class Engine (dbus.service.Object):
                 self.notice('warning', 'Couldn\'t find any article matching "{0}"'.format(string))
             return arts
         except Exception, e:
+            self.log.warning(e)
             self.warning('warning', 'Search for "{0}" failed!'.format(string))
-            raise e
 
     @dbus.service.method('com.itgears.brss', in_signature='a{sv}')
     def toggle_starred(self, item):
@@ -408,7 +418,7 @@ class Engine (dbus.service.Object):
 
     ## 6. Runners and stoppers
     @dbus.service.method('com.itgears.brss')
-    def run(self):
+    def start(self):
         Gtk.main()
 
     @dbus.service.method('com.itgears.brss')
@@ -441,7 +451,8 @@ class Engine (dbus.service.Object):
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.brss', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/brss/Engine')
-        self.log.debug("Starting {0}".format(self))
+        Notify.init('BRss')
+        self.__notify_startup()
         Gdk.threads_add_timeout_seconds(0, self.__update_interval, self.__timed_update, None)
         
     def __repr__(self):
@@ -464,8 +475,8 @@ class Engine (dbus.service.Object):
     def __insert_feed(self, feed):
         try:
             assert self.__item_exists('feeds', 'url', feed['url']) == False
-            q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}")'.format(
-                feed['id'], feed['name'], feed['url'], feed['category'])
+            q = 'INSERT INTO feeds VALUES("{0}", "{1}", "{2}", "{3}", "{4}")'.format(
+                feed['id'], feed['name'], feed['url'], feed['category'], feed['timestamp'])
             cursor = self.conn.cursor()
             cursor.execute(q)
             self.conn.commit()
@@ -498,14 +509,17 @@ class Engine (dbus.service.Object):
                     [img['name'],img['url'],img['article_id']])
             self.conn.commit()
             cursor.close()
-        except AssertionError, e:
+        except AssertionError:
             self.log.debug("article {0} already exists, skipping".format(art['id']))
     def __insert_items_for(self, feed):
         try:
             articles = feed.pop('articles') # we don't need them anymore
         except KeyError:
-            self.notice('info', 'Feed {0} has no new articles'.format(feed['name']))
+            self.notice('info', 'Feed {0} has no new articles, or we may be offline'.format(feed['name']))
             articles = None
+        except Exception, e:
+            self.log.warning("Error occured: {0}".format(e))
+            
         # verify that the feed exists and create if it doesn't
         if not self.__item_exists('feeds', 'id', feed['id']):
             self.__insert_feed(feed)
@@ -516,7 +530,9 @@ class Engine (dbus.service.Object):
         if feed['fetched_count'] == 0 and c == 0: # ... and never had! Fingerprinted as invalid!
             self.warning('warning', 'Feed {0} seems to be invalid'.format(feed['name']))
             return False
-        q = 'UPDATE feeds SET name = "{0}" WHERE id = "{1}"'.format(feed['name'],feed['id'])
+        # update feed data
+        q = 'UPDATE feeds SET name = "{0}", timestamp = "{1}" WHERE id = "{2}"'.format(
+            feed['name'],feed['timestamp'],feed['id'])
         cursor.execute(q)
         self.conn.commit()
         cursor.close()
@@ -551,12 +567,13 @@ class Engine (dbus.service.Object):
     def __get_feeds_for(self, cid):
         self.log.debug("Getting feeds for category: {0}".format(cid))                
         feeds = []
-        q = 'SELECT id,name,url, category_id FROM feeds WHERE category_id = "{0}" ORDER BY name ASC'.format(cid)
+        q = 'SELECT id,name,url,category_id,timestamp FROM feeds WHERE category_id = "{0}" ORDER BY name ASC'.format(cid)
         cursor = self.conn.cursor()
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
-            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 'category':r[3]}
+            f = {'type':'feed', 'id': r[0], 'name':r[1].encode('utf-8'), 'url':r[2], 
+                'category':r[3], 'timestamp':r[4]}
             f['count'] = self.__count_unread_items(f)
             feeds.append(f)
         cursor.close()
@@ -584,6 +601,7 @@ class Engine (dbus.service.Object):
         for c in categories:
             feeds.extend(self.__get_feeds_for(c['id']))
         self.__update_feeds(feeds)
+        self.__notify_update()
     def __update_category(self, category):
         self.notice('wait', 'Updating [Category] {0}'.format(
             category['name']))
@@ -610,7 +628,6 @@ class Engine (dbus.service.Object):
         cons_thread.start()
         prod_thread.join()
         cons_thread.join()
-        #~ self.notice('ok', 'Update completed')
         self.__last_update = time.time()
         self.__in_update = False
     
@@ -636,8 +653,8 @@ class Engine (dbus.service.Object):
         # now delete
         try:
             os.unlink(os.path.join(self.favicon_path,feed['id']))
-        except: # not there?
-            pass
+        except Exception, e: # not there?
+            self.log.warning(e)
         q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
         cursor = self.conn.cursor()        
         cursor.execute(q)
@@ -652,10 +669,12 @@ class Engine (dbus.service.Object):
         if (rows is not None) and (len(rows)>0):
             for i in rows:
                 filename = os.path.join(self.images_path,i[0])
-                print "Deleting ", filename
+                self.log.debug("Deleting image: {0}".format(filename))
                 try:
                     os.unlink(filename)
-                except: pass #already gone?
+                except Exception, e: 
+                    self.log.warning(e)
+
         # now remove image entries in DB
         cursor.execute('DELETE FROM images WHERE article_id = ?', [art_id])
         self.conn.commit()
@@ -803,7 +822,7 @@ class Engine (dbus.service.Object):
         cursor.executescript('''
             CREATE TABLE config(key varchar(32) PRIMARY KEY, value varchar(256) NOT NULL);
             CREATE TABLE categories(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL);
-            CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL);
+            CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL, timestamp integer NOT NULL);
             CREATE TABLE articles(id varchar(256) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, url varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, feed_id integer NOT NULL);
             CREATE TABLE images(id integer PRIMARY KEY, name varchar(256) NOT NULL, url TEXT NOT NULL, article_id varchar(256) NOT NULL);
             INSERT INTO config VALUES('max', '10');
@@ -814,7 +833,21 @@ class Engine (dbus.service.Object):
             ''')
         self.conn.commit()
         cursor.close()
-
+    
+    def __notify_update(self):
+        n = Notify.Notification.new(
+            "BRss: Update report",
+            "{0} unread article(s)".format(self.__count_unread_items()),
+            make_path('icons', 'brss.svg'))
+        n.show()
+        
+    def __notify_startup(self):
+        n = Notify.Notification.new(
+            "BRss started",
+            "BRss Feed Engine is running",
+            make_path('icons', 'brss.svg'))
+        n.show()
+        self.log.debug("Starting {0}".format(self))
     def __get_config(self, key):
         q = 'SELECT value FROM config WHERE key = "{0}"'.format(key)
         cursor = self.conn.cursor()

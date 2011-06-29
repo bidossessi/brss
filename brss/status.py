@@ -26,13 +26,16 @@ from gi.repository import Gdk
 from gi.repository import GObject
 
 
-class Status (Gtk.HBox):
+class Status (Gtk.Alignment):
     """ The feedtree handles feeds and categories management. """
     
     
     def __init__(self):
-        Gtk.HBox.__init__(self, spacing=3)
+        Gtk.Alignment.__init__(self)
+        self.set(0.5, 0.5, 1,1)
+        self.set_padding(0,0,3,3)
         self.set_no_show_all(True)
+        box = Gtk.HBox(spacing=3)
         self.ok_img = Gtk.Image().new_from_stock('gtk-apply', Gtk.IconSize.MENU)
         self.add_img = Gtk.Image().new_from_stock('gtk-add', Gtk.IconSize.MENU)
         self.info_img = Gtk.Image().new_from_stock('gtk-info', Gtk.IconSize.MENU)
@@ -40,23 +43,26 @@ class Status (Gtk.HBox):
         self.error_img = Gtk.Image().new_from_stock('gtk-dialog-error', Gtk.IconSize.MENU)
         self.busy = Gtk.Spinner()
         self.status = Gtk.Statusbar()
-        self.pack_start(self.ok_img, False, False, 0)
-        self.pack_start(self.add_img, False, False, 0)
-        self.pack_start(self.info_img, False, False, 0)
-        self.pack_start(self.warning_img, False, False, 0)
-        self.pack_start(self.error_img, False, False, 0)
-        self.pack_start(self.busy, False, False, 0)
-        self.pack_start(self.status, True, True, 0)
+        box.pack_start(self.ok_img, False, False, 0)
+        box.pack_start(self.add_img, False, False, 0)
+        box.pack_start(self.info_img, False, False, 0)
+        box.pack_start(self.warning_img, False, False, 0)
+        box.pack_start(self.error_img, False, False, 0)
+        box.pack_start(self.busy, False, False, 0)
+        box.pack_start(self.status, True, True, 0)
+        self.add(box)
         self.show()
+        box.show()        
         self.status.show()
         self.__hide_icons()
-        
+        self.cid = None
+        self.mid = None
     
     def message(self, context, message):
         self.__hide_icons()
         self.__handle_context(context)
-        cid = self.status.get_context_id(context)
-        self.status.push(cid, message)
+        self.cid = self.status.get_context_id(context)
+        self.mid = self.status.push(self.cid, message)
     
     def __hide_icons(self):
         self.ok_img.hide()
@@ -88,4 +94,4 @@ class Status (Gtk.HBox):
 
     def clear(self):
         self.__hide_icons()
-        self.status.set_text('')
+        self.message('clear', '')

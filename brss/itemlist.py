@@ -63,6 +63,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
         }
     
     def __init__(self):
+        #TODO: break init up 
+        #TODO: implement filter clearing icon.
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         self.current_item = None
@@ -322,9 +324,10 @@ class ItemList (Gtk.VBox, GObject.GObject):
         #~ print "Star this: ", item
     #~ def do_read_toggled(self, item):
         #~ print "Toggle this: ", item
-    def do_search_requested(self, item):
-        print "Search for: ", item
-    
+    #~ def do_search_requested(self, item):
+        #~ print "Search for: ", item
+    #~ def do_no_data(self):
+        #~ print "No data found!"
     def do_list_loaded(self):
         self.listselect.select_path((0,))
 
@@ -399,44 +402,3 @@ class ItemListMenu(Gtk.Menu):
 
     def _monitor_instance(self, treeview, item):
         self._dirty = True
-        
-if __name__ == '__main__':
-
-    def convert(item, tp='feed'):
-        i = {
-                'type': tp,
-                'id': item['id'],
-                'name': item['name'],
-            }
-        return i
-    
-    def callback(ilist, item, method):
-        print item
-        print method(item)
-    
-    def dcb(*args):
-        print args
-        
-    import dbus
-    import dbus.mainloop.glib
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
-    bus                 = dbus.SessionBus()
-    engine              = bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
-    get_articles_for    = engine.get_dbus_method('get_articles_for', 'com.itgears.brss')
-    get_article         = engine.get_dbus_method('get_article', 'com.itgears.brss')
-    toggle_starred      = engine.get_dbus_method('toggle_starred', 'com.itgears.brss')
-    toggle_read         = engine.get_dbus_method('toggle_read', 'com.itgears.brss')
-    exit                = engine.get_dbus_method('exit', 'com.itgears.brss')
-
-    window = Gtk.Window()
-    window.connect("destroy", Gtk.main_quit)
-    window.set_default_size(600, 400)
-    tree = ItemList()
-    window.add(tree)
-    window.show_all()
-    tree.load_list(exfeed)
-    #~ tree.connect_after('item-selected', callback, get_article)
-    tree.connect('star-toggled', callback, toggle_starred)
-    tree.connect('read-toggled', callback, toggle_read)
-    Gtk.main()

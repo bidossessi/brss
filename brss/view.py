@@ -45,10 +45,14 @@ class View (Gtk.VBox, GObject.GObject):
             None,
             (GObject.TYPE_STRING,)),
         
-        "link-hovered" : (
+        "link-hovered-in" : (
             GObject.SignalFlags.RUN_FIRST, 
             None,
             (GObject.TYPE_STRING,)),
+        "link-hovered-out" : (
+            GObject.SignalFlags.RUN_FIRST, 
+            None,
+            ()),
         }
 
     def __init__(self):
@@ -63,7 +67,9 @@ class View (Gtk.VBox, GObject.GObject):
         self.feedview = WebKit.WebView()
         self.feedview.set_full_content_zoom(True)
         self.feedview.connect("navigation-policy-decision-requested", self.__override_clicks)
-        self.feedview.connect("hovering-over-link", self.__hover_link)
+        self.feedview.connect("hovering-over-link", self.__hover_webview)
+        self.link_button.connect("enter-notify-event", self.__hover_link, "in")
+        self.link_button.connect("leave-notify-event", self.__hover_link)
 
         # containers
         tal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
@@ -90,10 +96,16 @@ class View (Gtk.VBox, GObject.GObject):
         self.feedview.load_string(art['content'], "text/html", "utf-8", "file:")
         self.emit('article-loaded')
     
-    def __hover_link(self, caller, alt, url):
+    def __hover_webview(self, caller, alt, url):
         if url:
-            self.emit('link-hovered', url)
-
+            self.emit('link-hovered-in', url)
+        else:
+            self.emit('link-hovered-out')
+    def __hover_link(self, button, event, io="out"):
+        if io == "in":
+            self.emit('link-hovered-in', button.get_uri())
+        else:
+            self.emit('link-hovered-out')
     def __override_clicks(self, frame, request, navigation_action, policy_decision, data=None):
         uri = navigation_action.get_uri()
         if uri in self.valid_links:
