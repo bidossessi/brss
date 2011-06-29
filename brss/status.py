@@ -63,7 +63,8 @@ class Status (Gtk.Alignment):
         self.__handle_context(context)
         self.cid = self.status.get_context_id(context)
         self.mid = self.status.push(self.cid, message)
-    
+    def warning(self, message):
+        self.message("warning", message)
     def __hide_icons(self):
         self.ok_img.hide()
         self.add_img.hide()

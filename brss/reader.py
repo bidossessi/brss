@@ -81,12 +81,6 @@ class Reader (Gtk.Window, GObject.GObject):
         Gtk.Window.__init__(self)
         self.__gobject_init__()
         GObject.type_register(Reader)
-        try:
-            self.__get_engine()
-        except:
-            # should we start it automitacally?
-            self.quit()
-            
         # ui elements
         self.tree = Tree(base_path)
         self.ilist = ItemList()
@@ -96,6 +90,7 @@ class Reader (Gtk.Window, GObject.GObject):
         # layout
         self.__layout_ui()
         #signals
+        self.__get_engine()            
         self.__connect_signals()
         # ready to go
         self.emit('loaded')
@@ -106,6 +101,8 @@ class Reader (Gtk.Window, GObject.GObject):
         try:
             self.engine              = bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
         except:
+            self.alert.error("Could not connect to Engine", 
+            "BRss will now quit.\n Please make sure that the engine is running and restart the application")
             self.quit()
         self.create               = self.engine.get_dbus_method('create', 'com.itgears.brss')
         self.edit                = self.engine.get_dbus_method('edit', 'com.itgears.brss')
@@ -120,8 +117,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.count_special       = self.engine.get_dbus_method('count_special', 'com.itgears.brss')
         self.import_opml         = self.engine.get_dbus_method('import_opml', 'com.itgears.brss')
         self.export_opml         = self.engine.get_dbus_method('export_opml', 'com.itgears.brss')
-        
-    def __create__menu(self):
+        self.ag.get_action('Reconnect').set_visible(False)
+    def __create_menu(self):
         ui_string = """<ui>
                    <menubar name='Menubar'>
                     <menu action='FeedMenu'>
@@ -131,6 +128,8 @@ class Reader (Gtk.Window, GObject.GObject):
                      <separator/>
                      <menuitem action='Import feeds'/>
                      <menuitem action='Export feeds'/>
+                     <separator />
+                     <menuitem name='Reconnect' action='Reconnect'/>
                      <separator/>
                      <menuitem action='Quit'/>
                     </menu>
@@ -159,6 +158,8 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='New feed' action='New feed'/>
                     <toolitem name='New category' action='New category'/>
                     <separator name='sep1'/>
+                    <toolitem name='Reconnect' action='Reconnect'/>
+                    <separator />
                     <toolitem name='Update all' action='Update all'/>
                     <toolitem name='Stop' action='Stop update'/>
                     <separator name='sep2'/>
@@ -177,20 +178,21 @@ class Reader (Gtk.Window, GObject.GObject):
 
 
 
-        ag = Gtk.ActionGroup('WindowActions')
+        self.ag = Gtk.ActionGroup('WindowActions')
         actions = [
                 ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Add a feed', self.__add_feed),
                 ('New category', "gtk-directory", 'New _category', '<alt>C', 'Add a category', self.__add_category),
-                ('Delete', "gtk-clear", 'Delete', 'Delete', 'Deletes a feed or a category', self.__delete_item),
-                ('Import feeds', "gtk-redo", 'Import feeds', None, 'Imports a feedlist', self.__import_feeds),
-                ('Export feeds', "gtk-undo", 'Export feeds', None, 'Exports a feedlist', self.__export_feeds),
+                ('Delete', "gtk-clear", 'Delete', 'Delete', 'Delets a feed or a category', self.__delete_item),
+                ('Import feeds', "gtk-redo", 'Import feeds', None, 'Import a feedlist', self.__import_feeds),
+                ('Export feeds', "gtk-undo", 'Export feeds', None, 'Export a feedlist', self.__export_feeds),
+                ('Reconnect', "gtk-disconnect", '_Reconnect', None, 'Try and reconnect to the feed engine', self.__reconnect),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('EditMenu', None, 'E_dit'),
-                ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edits the selected element'),
-                ('Preferences', "gtk-execute", '_Preferences', '<control>P', 'Shows preferences'),
+                ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edit the selected element'),
+                ('Preferences', "gtk-preferences", '_Preferences', '<control>P', 'Configure the engine'),
                 ('NetworkMenu', None, '_Network'),
-                ('Update', None, '_Update', '<control>U', 'Updates the selected feed', self.__update_feed),
+                ('Update', None, '_Update', '<control>U', 'Update the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
                 ('PreviousArticle', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous_article),
                 ('NextArticle', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next_article),
@@ -202,19 +204,19 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('About', "gtk-about", '_About', None, 'About', self.__about),
                 ]
         tactions = [
-                ('Search', "gtk-find", 'Search', '<control>F', 'Searchs for a term in the feeds', self.__toggle_search),
+                ('Search', "gtk-find", 'Search', '<control>F', 'Search for a term in the articles', self.__toggle_search),
                 ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
                 ]
 
-        ag.add_actions(actions)
-        ag.add_toggle_actions(tactions)
+        self.ag.add_actions(actions)
+        self.ag.add_toggle_actions(tactions)
         self.ui = Gtk.UIManager()
-        self.ui.insert_action_group(ag, 0)
+        self.ui.insert_action_group(self.ag, 0)
         self.ui.add_ui_from_string(ui_string)
         self.add_accel_group(self.ui.get_accel_group())
 
     def __layout_ui(self):
-        self.__create__menu()
+        self.__create_menu()
         opane = Gtk.VPaned()
         opane.pack1(self.ilist)
         opane.pack2(self.view)
@@ -269,10 +271,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.view.connect('link-hovered-in', self.__status_info)
         self.view.connect('link-hovered-out', self.__status_info)
         self.engine.connect_to_signal('notice', self.status.message)
-        self.engine.connect_to_signal('newitem', self.tree.insert_row)
-        self.engine.connect_to_signal('feedupdate', self.tree.refresh_unread_counts)
+        self.engine.connect_to_signal('added', self.tree.insert_row)
+        self.engine.connect_to_signal('updated', self.tree.update_row)
         # might want to highlight these a bit more
-        #~ self.engine.connect_to_signal('warning', self.status.message)
+        self.engine.connect_to_signal('warning', self.status.warning)
     
     
     def __import_feeds(self, *args):
@@ -362,10 +364,10 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
         self.__create(item)
     def __add_feed(self, *args):
-        args = [
+        data = [
         {'type':'str','name':'url', 'header':'Link' },
             ]
-        d = Dialog(self, 'Add a feed', args)
+        d = Dialog(self, 'Add a feed', data)
         d.run()
         item = d.response
         item['type'] = 'feed'
@@ -373,6 +375,8 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
         self.__create(item)
     
+    def __edit_prefs(self, *args):
+        pass
     def __about(self, *args):
         """Shows the about message dialog"""
         from brss import __version__, __maintainers__
@@ -468,6 +472,8 @@ class Reader (Gtk.Window, GObject.GObject):
         
         elif name in ['Delete', 'Delete Feed', 'Delete Category']:
             self.__delete(item)
+        elif name in ['Edit',]:
+            self.__edit_item(item)
     def __search_articles(self, caller, string):
         self.search_for(string,
                 reply_handler=self.ilist.load_list,
@@ -508,7 +514,6 @@ class Reader (Gtk.Window, GObject.GObject):
         self.emit('previous-feed')
     def __next_feed(self, *args):
         self.emit('next-feed')
-    
     def __to_clipboard(self, link):
         clipboard = Gtk.Clipboard()
         clipboard.set_text(link.encode("utf8"), -1)
@@ -525,9 +530,13 @@ class Reader (Gtk.Window, GObject.GObject):
             self.tree.hide()
             self.fullscreen()
             self.is_fullscreen = True
-    
+    def __reconnect(self, *args):
+        self.__get_engine()
+        self.__connect_signals()
+        self.status.message('ok', 'Connected to engine')
     def __no_engine(self, *args):
         self.status.message('error', "Cannot connect to the Feed Engine")
+        self.ag.get_action('Reconnect').set_visible(True)
     def __feed_selected(self, caller, item):
         if item['type'] in ['feed', 'category']:
             self.status.message('info', "[{0}] {1}".format(
@@ -544,9 +553,6 @@ class Reader (Gtk.Window, GObject.GObject):
     #~ def do_loaded(self, *args):
         #~ print "Reader loaded"
 
-    def do_next_feed(self, *args):
-        self.alert.error("Couldn't connect to the Feed Engine",
-            "BRss will now quit.\nPlease make sure that brss-engine is running and restart the application.")
 
 def main():
     app = Reader()

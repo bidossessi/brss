@@ -73,7 +73,6 @@ class Alerts:
             
     def diag_response(self, dialog, response):
         """Stub. to override when needed."""
-        print "Alert response: ", response        
         if response == Gtk.ResponseType.CLOSE:
             pass
         elif response == Gtk.ResponseType.YES:

@@ -276,6 +276,18 @@ class Tree (Gtk.VBox, GObject.GObject):
                     citer = model.iter_next(citer)
             iter = model.iter_next(iter)
 
+    def update_row(self, item):
+        # use this to get the right store index
+        lmap = ['type','id','name','count','stock-id','url','category']
+        #find the item
+        iter = self.__search(1, item['id'])
+        if iter:
+            for k,v in item.iteritems():
+                try:
+                    self.store.set_value(iter, lmap.index(k), v)
+                except Exception, e:
+                    print e
+            
     def refresh_unread_counts(self, item):
         # we need the increment
         iter = self.__search(1, item['id'])
@@ -334,7 +346,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         s = ('starred', '0', 'Starred', starred, 'gtk-about')
         self.sstore.append(None, u)
         self.sstore.append(None, s)
-        self.emit('list-loaded')
+        #~ self.emit('list-loaded')
 
 
     def fill_menu(self, data):
@@ -382,10 +394,6 @@ class Tree (Gtk.VBox, GObject.GObject):
                 return item
         except:pass
     
-        
-    def run_dialog(self, dialog_name, item):
-        self.emit('dialog-request', dialog_name, item)
-        
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)
         
@@ -449,10 +457,7 @@ class TreeMenu(Gtk.Menu):
             self.append(menuitem)
         
     def _on_menuitem__activate(self, menuitem, callname, item):
-        # switch dialog or direct call
-        if callname in ['Edit', 'Add a Category', 'Add a Feed']:
-            self._tree.run_dialog(callname, item)
-        elif callname in ['Mark all as read', 'Update', 'Delete']:
+        if not item['id'] == "uncategorized":
             self._tree.run_dcall(callname, item)
 
     def _on_event(self, treeview, event):
