@@ -4,8 +4,8 @@
 
 BRss is an 'offline' RSS reader written in Python.
 It is a complete rewrite of another python RSS reader (Naufrago!),
-but based on the concept of service/client. It uses the dbus library
-to enable communication between the service and clients.
+based on the concept of service/client. It uses the dbus library to 
+enable communication between the service and clients.
 
 Features:
 ---------
@@ -21,3 +21,17 @@ brss-engine is a dbus service. Its main features are:
 
 2. brss-reader
 brss-reader is a GTK+ client for brss-engine.
+
+TODO:
+-----
+
+The following are planned, in no particular order:
+
+    - Move database handling to SQLAlchemy
+    - Localization
+    - Documentation
+    - Gnome3 design guidelines compliance
+    - Better logo and pixmaps
+    - CLI interface
+    - Synapse integration (for adding feeds)
+    - DnD feed recategorizing

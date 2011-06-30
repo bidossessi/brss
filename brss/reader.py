@@ -105,7 +105,7 @@ class Reader (Gtk.Window, GObject.GObject):
         try:
             self.engine              = bus.get_object('com.itgears.BRss.Engine', '/com/itgears/BRss/Engine')
         except:
-            self.log.critical("Couldn't get a DBus connection; quitting.")
+            self.log.critical("{0}: Couldn't get a DBus connection; quitting.".format(self))
             self.alert.error("Could not connect to Engine", 
             "BRss will now quit.\nPlease make sure that the engine is running and restart the application")
             self.quit()
@@ -126,7 +126,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.export_opml         = self.engine.get_dbus_method('export_opml', 'com.itgears.BRss.Engine')
         self.ag.get_action('Reconnect').set_visible(False)
         self.status.message('ok', 'Connected to engine')
-        self.log.debug("Connected to feed engine: {0}".format(self.engine))
+        self.log.debug("{0}: Connected to feed engine {1}".format(self, self.engine))
     def __create_menu(self):
         ui_string = """<ui>
                    <menubar name='Menubar'>
@@ -144,7 +144,7 @@ class Reader (Gtk.Window, GObject.GObject):
                     </menu>
                     <menu action='EditMenu'>
                      <menuitem action='Edit'/>
-                     <menuitem action='Search'/>
+                     <menuitem action='Find'/>
                      <menuitem action='Preferences'/>
                     </menu>
                     <menu action='NetworkMenu'>
@@ -154,8 +154,6 @@ class Reader (Gtk.Window, GObject.GObject):
                     <menu action='ViewMenu'>
                      <menuitem action='NextArticle'/>
                      <menuitem action='PreviousArticle'/>
-                     <menuitem action='NextFeed'/>
-                     <menuitem action='PreviousFeed'/>
                     <separator />
                      <menuitem action='FullScreen'/>
                     </menu>
@@ -172,13 +170,11 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Update all' action='Update all'/>
                     <toolitem name='Stop' action='Stop update'/>
                     <separator name='sep2'/>
-                    <toolitem name='PreviousFeed' action='PreviousFeed'/>
                     <toolitem name='PreviousArticle' action='PreviousArticle'/>
                     <toolitem name='NextArticle' action='NextArticle'/>
-                    <toolitem name='NextFeed' action='NextFeed'/>
                     <separator name='sep3'/>
                     <toolitem name='FullScreen' action='FullScreen'/>
-                    <toolitem name='Search' action='Search'/>
+                    <toolitem name='Find' action='Find'/>
                     <toolitem name='Preferences' action='Preferences'/>
                    </toolbar>
                   </ui>"""
@@ -213,7 +209,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('About', "gtk-about", '_About', None, 'About', self.__about),
                 ]
         tactions = [
-                ('Search', "gtk-find", 'Search', '<control>F', 'Search for a term in the articles', self.__toggle_search),
+                ('Find', "gtk-find", 'Find', '<control>F', 'Search for a term in the articles', self.__toggle_search),
                 ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
                 ]
 
@@ -228,7 +224,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.set_title('BRss Reader')
 
     def __layout_ui(self):
-        self.log.debug("Laying out User Interface")
+        self.log.debug("{0}: Laying out User Interface".format(self))
         self.__create_menu()
         opane = Gtk.VPaned()
         opane.pack1(self.ilist)
@@ -258,13 +254,13 @@ class Reader (Gtk.Window, GObject.GObject):
         
 
     def __connect_signals(self):    # signals
-        self.log.debug("Connecting all signals")
+        self.log.debug("{0}: Connecting all signals".format(self)))
         self.connect("destroy", self.quit)
         self.connect('loaded', self.__populate_menu)
         self.connect('next-article', self.ilist.next_item)
         self.connect('previous-article', self.ilist.previous_item)
-        self.connect('next-feed', self.tree.next_item)
-        self.connect('previous-feed', self.tree.previous_item)
+        #~ self.connect('next-feed', self.tree.next_item)#TODO: implement
+        #~ self.connect('previous-feed', self.tree.previous_item)#TODO: implement
         self.connect('search-toggled', self.ilist.toggle_search)
         self.connect_after('no-engine', self.__no_engine)
         self.tree.connect('item-selected', self.__load_articles)
@@ -301,13 +297,13 @@ class Reader (Gtk.Window, GObject.GObject):
 
         dialog.set_default_response(Gtk.ResponseType.OK)
 
-        filter == Gtk.FileFilter()
+        filter = Gtk.FileFilter()
         filter.set_name("opml/xml")
         filter.add_pattern("*.opml")
         filter.add_pattern("*.xml")
         dialog.add_filter(filter)
 
-        filter == Gtk.FileFilter()
+        filter = Gtk.FileFilter()
         filter.set_name("All files")
         filter.add_pattern("*")
         dialog.add_filter(filter)
@@ -317,7 +313,7 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
-            self.log.debug("Trying to import from OPML file: {0}".format(filename))
+            self.log.debug("{0}: Trying to import from OPML file {1}".format(self, filename))
             self.status.message("wait", "Importing Feeds")
             self.import_opml(filename, 
                 reply_handler=self.__to_log,
@@ -333,7 +329,7 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog.set_default_response(Gtk.ResponseType.OK)
         dialog.set_do_overwrite_confirmation(True)
         dialog.set_current_name("brss.opml")
-        filter == Gtk.FileFilter()
+        filter = Gtk.FileFilter()
         filter.set_name("opml/xml")
         filter.add_pattern("*.opml")
         filter.add_pattern("*.xml")
@@ -344,13 +340,13 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog.destroy()
         
         if response == Gtk.ResponseType.OK:
-            self.log.debug("Trying to export to OPML file: {0}".format(filename))
+            self.log.debug("{0}: Trying to export to OPML file {1}".format(self, filename))
             self.export_opml(filename, 
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
         
     def __populate_menu(self, *args):
-        self.log.debug("Populating menu")
+        self.log.debug("{0}: Populating menu".format(self))
         self.get_menu_items(
             reply_handler=self.tree.fill_menu,
             error_handler=self.__to_log)
@@ -367,7 +363,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
     def __load_articles(self, tree, item):
-        self.log.debug("Loading articles for feed {0}".format(item['name'].encode('utf_8')))
+        self.log.debug("{0}: Loading articles for feed {1}".format(self, item['name'].encode('utf_8')))
         self.get_articles_for(item, 
                 reply_handler=self.ilist.load_list,
                 error_handler=self.__to_log)

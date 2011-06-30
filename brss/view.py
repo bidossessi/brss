@@ -90,6 +90,7 @@ class View (Gtk.VBox, GObject.GObject):
     def show_article(self, art_tuple):
         self.show()
         art, links = art_tuple
+        self.log.debug("{0}: loading article {1}".format(self, art['id']))
         self.valid_links = links
         self.valid_links.append("file:")
         self.link_button.set_label("[{0}] - {1}".format(
@@ -122,7 +123,7 @@ class View (Gtk.VBox, GObject.GObject):
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")
         #~ self.hide()
 
-    #~ def do_link_hovered(self, url):
-        #~ print "Hovered: ", url
-    #~ def do_link_clicked(self, url):
-        #~ print "clicked: ", url
+    def do_link_hovered(self, url):
+        self.log.debug("{0}: Hovered on {1}".format(self, url))
+    def do_link_clicked(self, url):
+        self.log.debug("{0}: Clicked on {1}".format(self, url))

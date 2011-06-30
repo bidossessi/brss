@@ -182,6 +182,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         return r
         
     def load_list(self, data):
+        self.log.debug("{0}: Loading articles")
         store = self.listview.get_model()
         store.clear()
         # store structure (id, read, starred, date, title, url, weight, feed_id)
@@ -219,7 +220,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
     
     def __icon_pressed(self, entry, icon_pos, event):
         """Clears the standard filter GtkEntry."""
-        if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":
+        if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":# is that really necessary?
             if event.button == 1:
                 self.__clear_filter()
         if icon_pos.value_name == "GTK_ENTRY_ICON_SECONDARY":

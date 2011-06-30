@@ -21,6 +21,7 @@
 #       MA 02110-1301, USA.
 #       
 #       
+#TODO: Stopping updates
 import time
 import datetime
 import sqlite3
@@ -894,6 +895,7 @@ class Engine (dbus.service.Object):
         for r in rows:
             articles.append(
                 {
+                    'type':'article',
                     'id':r[0], 
                     'read':r[1], 
                     'starred':r[2],

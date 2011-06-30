@@ -132,7 +132,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             factory.add_default()
             return True
         except Exception, e: 
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.debug("{0}: {1}".format(self, e))
             return False
     
 
@@ -237,29 +237,29 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menuselect.unselect_all()
         self.current_item = None
 
-    def next_item(self, *args):
-        self.log.debug('Selecting next feed')
-        model, iter = self.menuselect.get_selected()
-        if model.get_value(iter, 0) == "category":
-            #select the first child
-            iter = model.iter_children(iter)
-        if iter:
-            niter = model.iter_next(iter)
-            try: self.menuselect.select_iter(niter)
-            except Exception, e:
-                self.log.warning("{0}: {1}".format(self, e))
-    
-    def previous_item(self, *args): #FIXME: doesn't work
-        self.log.debug('Selecting previous feed')
-        model, iter = self.menuselect.get_selected()
-        if model.get_value(iter, 0)=="category":
-            #select the first child
-            iter = model.iter_children(iter)
-        if iter:
-            s = model.get_string_from_iter(iter)
-            if int(s) > 0:
-                niter = model.get_iter_from_string(str(int(s)-1))
-                self.menuselect.select_iter(niter)
+    #~ def next_item(self, *args):
+        #~ self.log.debug('Selecting next feed')
+        #~ model, iter = self.menuselect.get_selected()
+        #~ if model.get_value(iter, 0) == "category":
+            #~ #select the first child
+            #~ iter = model.iter_children(iter)
+        #~ if iter:
+            #~ niter = model.iter_next(iter)
+            #~ try: self.menuselect.select_iter(niter)
+            #~ except Exception, e:
+                #~ self.log.warning("{0}: {1}".format(self, e))
+    #~ 
+    #~ def previous_item(self, *args): #FIXME: doesn't work
+        #~ self.log.debug('Selecting previous feed')
+        #~ model, iter = self.menuselect.get_selected()
+        #~ if model.get_value(iter, 0)=="category":
+            #~ #select the first child
+            #~ iter = model.iter_children(iter)
+        #~ if iter:
+            #~ s = model.get_string_from_iter(iter)
+            #~ if int(s) > 0:
+                #~ niter = model.get_iter_from_string(str(int(s)-1))
+                #~ self.menuselect.select_iter(niter)
         
     def __search(self, col, value, model=None):
         """
@@ -363,7 +363,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         try:
             self.store.disconnect_by_func(self.__row_changed)
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.debug("{0}: {1}".format(self, e))
         if data:
             row = None
             for item in data:
@@ -410,11 +410,13 @@ class Tree (Gtk.VBox, GObject.GObject):
         
     # convenience
     def do_item_selected(self, item):
+        self.log.debug("{0}: item selected {1}".format(self, item))
         if item['type'] in ['starred', 'unread']:
             self.menuselect.unselect_all()
         elif item['type'] in ['feed', 'category']:
             self.sselect.unselect_all()
     def do_list_loaded(self):
+        self.log.debug("{0}: selecting 'Unread' folder".format(self))
         iter = self.__search(0, 'unread', self.sstore)
         self.sselect.select_iter(iter)
         
