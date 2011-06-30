@@ -28,9 +28,8 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 import subprocess
 import os
 import time
-from reader import Reader
+from reader import Reader, run_reader
 from engine import Engine
-from logger import Logger
 
 home = os.getenv("HOME")
 BASE_PATH = os.path.join(home,'.config','brss')
@@ -42,7 +41,7 @@ def check_path():
 def check_engine():
     bus = dbus.SessionBus()
     try:
-        bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
+        bus.get_object('com.itgears.BRss.Engine', '/com/itgears/BRss/Engine')
     except:
         return False
     return True
@@ -50,11 +49,10 @@ def check_engine():
 def run_engine():
     check_path()
     session_bus = dbus.SessionBus()
-    if session_bus.request_name("com.itgears.brss") != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
+    if session_bus.request_name('com.itgears.BRss.Engine') != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "application already running"
     else:
-        log = Logger(BASE_PATH)
-        engine = Engine(log, BASE_PATH)
+        engine = Engine(BASE_PATH)
         engine.start()
 
 def run_frontend():
@@ -67,7 +65,6 @@ def run_frontend():
         time.sleep(max)
         i +=1
     if check_engine():
-        reader = Reader(BASE_PATH)
-        reader.start()
+        run_reader(Reader, BASE_PATH)
     else:
         print "Couldn't start engine"
