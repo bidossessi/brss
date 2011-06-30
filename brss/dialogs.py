@@ -41,11 +41,19 @@ class TextEntry(Gtk.Entry, Custom) :
         value = self.get_text().replace("\n","").replace("\r","")
         return value
 
-class NumEntry(TextEntry) :
+class NumEntry(Gtk.Entry, Custom) :
     def __init__(self, name, header):
-        TextEntry.__init__(self, name, header)
+        Gtk.Entry.__init__(self)
+        Custom.__init__(self, name, header)
         self.set_alignment(1.0)
+    
+    def set_value(self, value):
+        self.set_text(str(value))
 
+    def get_value(self, suppress=False):
+        value = self.get_text().replace("\n","").replace("\r","")
+        return int(value)
+        
 class CheckBtn(Gtk.CheckButton, Custom) :
 
     def __init__(self, name, header):

@@ -50,13 +50,15 @@ class Tree (Gtk.VBox, GObject.GObject):
             (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT,)),
     }
     
-    def __init__(self, base_path="."):
+    def __init__(self, base_path, logger):
+        self.log = logger
         self.favicon_path = os.path.join(base_path, 'favicons')
         self.images_path = os.path.join(base_path, 'images')
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)
         #store (type,id,name,count,stock-id, url, category_id) 
+        self.lmap = ['type','id','name','count','stock-id','url','category']
         self.store = Gtk.TreeStore(str, str, str, int, str, str, str)
         self.store.set_sort_func(2, self.__sort_type, 0)
         #~ self.store.set_default_sort_func(self.__sort_type, 0)
@@ -129,7 +131,9 @@ class Tree (Gtk.VBox, GObject.GObject):
             factory.add(stock_id, iconset)
             factory.add_default()
             return True
-        except: return False
+        except Exception, e: 
+            self.log.warning("{0}: {1}".format(self, e))
+            return False
     
 
     def __sort_type(self, model, iter1, iter2, tp):
@@ -141,7 +145,8 @@ class Tree (Gtk.VBox, GObject.GObject):
         try:
             name1 = model.get_value(iter1, 2).lower()
             name2 = model.get_value(iter2, 2).lower()
-        except:
+        except Exception, e:
+            self.log.debug("{0}: {1}".format(self, e))
             name1 = model.get_value(iter1, 2)
             name2 = model.get_value(iter2, 2)
         #3. put general on top
@@ -214,7 +219,8 @@ class Tree (Gtk.VBox, GObject.GObject):
             stock = self.__setup_icons(os.path.join(self.favicon_path, a['id']), a['id'])
             if stock:
                 gmap[a['id']] = a['id']
-        except Exception, e: print e
+        except Exception, e: 
+            self.log.warning("{0}: {1}".format(self, e))
         r = (
             a['type'],
             a['id'],
@@ -232,16 +238,19 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.current_item = None
 
     def next_item(self, *args):
+        self.log.debug('Selecting next feed')
         model, iter = self.menuselect.get_selected()
-        if model.get_value(iter, 0)=="category":
+        if model.get_value(iter, 0) == "category":
             #select the first child
             iter = model.iter_children(iter)
         if iter:
             niter = model.iter_next(iter)
             try: self.menuselect.select_iter(niter)
-            except: pass
+            except Exception, e:
+                self.log.warning("{0}: {1}".format(self, e))
     
     def previous_item(self, *args): #FIXME: doesn't work
+        self.log.debug('Selecting previous feed')
         model, iter = self.menuselect.get_selected()
         if model.get_value(iter, 0)=="category":
             #select the first child
@@ -277,35 +286,26 @@ class Tree (Gtk.VBox, GObject.GObject):
             iter = model.iter_next(iter)
 
     def update_row(self, item):
-        # use this to get the right store index
-        lmap = ['type','id','name','count','stock-id','url','category']
         #find the item
         iter = self.__search(1, item['id'])
         if iter:
             for k,v in item.iteritems():
                 try:
-                    self.store.set_value(iter, lmap.index(k), v)
+                    self.store.set_value(iter, self.lmap.index(k), v)
                 except Exception, e:
-                    print e
-            
-    def refresh_unread_counts(self, item):
-        # we need the increment
-        iter = self.__search(1, item['id'])
+                    self.log.warning("{0}: {1}".format(self, e))
+                    
+    def __count_unread(self, model, path, iter, data):
+        if model.get_value(iter, 0) == 'feed':
+            self.c += model.get_value(iter, 3)
+
+    def __row_changed(self, model, path, iter):            
+        self.c = 0
+        model.foreach(self.__count_unread, None)
+        iter = self.__search(0, 'unread', self.sstore)
         if iter:
-            ori = self.store.get_value(iter, 3) # original
-            inc = item['count'] - ori
-            self.__update_count(self.store, iter, 3, inc, [])
-            self.__update_parent_count(iter, inc, [])
-        # item is a feed
-        iter = self.__search(0, 'unread')
-        if iter:
-            o = self.store.get_value(iter, 3) 
-            self.__update_count(self.store, iter, 3, item[col], True)
-    
-    def __update_parent_count(self, iter, val, flags):
-        if self.store.iter_parent(iter):
-            self.__update_count(self.store, 
-                self.store.iter_parent(iter), 3, val, flags)
+            self.__update_count(self.sstore, iter, 3, self.c, ['replace'])
+                
 
     def update_starred(self, ilist, item):
         # if item['starred'] is 0, we go minus
@@ -318,12 +318,19 @@ class Tree (Gtk.VBox, GObject.GObject):
         # try to update the originating feed
         iter = self.__search(1, item['feed_id'])
         if iter:
-            self.__update_count(self.store, iter, 3, item[col], flags)
-            self.__update_parent_count(iter, item[col], flags)
-        # now update unread
-        iter = self.__search(0, 'unread', self.sstore)
-        if iter:
-            self.__update_count(self.sstore, iter, 3, item[col], flags)
+            self.__update_count(
+                self.store, 
+                iter, 
+                self.lmap.index('count'), 
+                item[col], 
+                flags)
+            if self.store.iter_parent(iter):
+                self.__update_count(
+                    self.store, 
+                    self.store.iter_parent(iter), 
+                    self.lmap.index('count'), 
+                    item[col], 
+                    flags)
     
 
     def __update_count (self, model, iter, col, var, flags):
@@ -346,13 +353,17 @@ class Tree (Gtk.VBox, GObject.GObject):
         s = ('starred', '0', 'Starred', starred, 'gtk-about')
         self.sstore.append(None, u)
         self.sstore.append(None, s)
-        #~ self.emit('list-loaded')
+        self.emit('list-loaded')
 
 
     def fill_menu(self, data):
         """Load the given data into the left menuStore"""
         # return the first iter
         self.store.clear()
+        try:
+            self.store.disconnect_by_func(self.__row_changed)
+        except Exception, e:
+            self.log.warning("{0}: {1}".format(self, e))
         if data:
             row = None
             for item in data:
@@ -361,6 +372,8 @@ class Tree (Gtk.VBox, GObject.GObject):
                 if item['type'] == 'feed':
                     self.store.append(row, self.__format_row(item))
         self.menuview.expand_all()
+        self.store.connect('row-changed', self.__row_changed)
+
 
     def insert_row(self, item):
         # start with categories:
@@ -368,8 +381,10 @@ class Tree (Gtk.VBox, GObject.GObject):
             self.store.append(None, self.__format_row(item))
         elif item['type'] == 'feed':
             iter = self.__search(1,item['category'])
-            self.store.append(iter, self.__format_row(item))
-            self.menuview.expand_row(self.store.get_path(iter), False)
+            if iter:
+                self.store.append(iter, self.__format_row(item))
+                self.menuview.expand_row(self.store.get_path(iter), False)
+    
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
@@ -381,18 +396,14 @@ class Tree (Gtk.VBox, GObject.GObject):
        
     
     def __get_current(self, selection):
-        try:
             (model, iter) = selection.get_selected()
-            path = model.get_path(iter)
             if iter:
-                item = {
-                    'type': model.get_value(iter, 0),
-                    'id': model.get_value(iter, 1),
-                    'name': model.get_value(iter, 2),
+                self.current_item = {
+                    'type':     model.get_value(iter, 0),
+                    'id':       model.get_value(iter, 1),
+                    'name':     model.get_value(iter, 2),
                 }
-                self.current_item = item
-                return item
-        except:pass
+                return self.current_item
     
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)
@@ -413,7 +424,6 @@ class TreeMenu(Gtk.Menu):
     for context handling.
     """
     def __init__(self, tree):
-        #~ #print "creating a ViewMenu"
         Gtk.Menu.__init__(self)
         self._dirty = True
         self._signal_ids = []

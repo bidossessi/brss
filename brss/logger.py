@@ -6,10 +6,10 @@ import os
 
 class Logger:
     
-    def __init__(self, base_path=".", debug=True):
-        self.logger = logging.getLogger("BRss")
+    def __init__(self, base_path=".", path="brss.log", name="BRss", debug=True):
+        self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
-        logpath = os.path.join(base_path, "brss.log")
+        logpath = os.path.join(base_path, path)
         usrlog  = logging.FileHandler(logpath, 'w')
         console = logging.StreamHandler()
         console.setLevel(logging.DEBUG)

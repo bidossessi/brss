@@ -55,13 +55,15 @@ class View (Gtk.VBox, GObject.GObject):
             ()),
         }
 
-    def __init__(self):
+    def __init__(self, logger):
+        self.log = logger
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         # top navi
         tbox = Gtk.HBox(spacing=3)
         # navigation buttons
         self.link_button = Gtk.LinkButton('', label='Article Title')
+        self.link_button.set_relief(Gtk.ReliefStyle.NONE)
         tbox.pack_start(self.link_button, True, True,0)
         # webkit view
         self.feedview = WebKit.WebView()
@@ -124,42 +126,3 @@ class View (Gtk.VBox, GObject.GObject):
         #~ print "Hovered: ", url
     #~ def do_link_clicked(self, url):
         #~ print "clicked: ", url
-         
-if __name__ == '__main__':
-    def convert(item, tp='feed'):
-        i = {
-                'type': tp,
-                'id': item['id'],
-                'name': item['name'],
-            }
-        return i
-
-    def convert2(item):
-        i = {
-                'id': item['id'],
-                'title': item['title'],
-                'url': item['link']
-            }
-        return i
-
-    def callback(ilist, item, method):
-        print method(item)
-        
-    import dbus
-    import dbus.mainloop.glib
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
-    bus                 = dbus.SessionBus()
-    engine              = bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
-    get_articles_for    = engine.get_dbus_method('get_articles_for', 'com.itgears.brss')
-    get_article         = engine.get_dbus_method('get_article', 'com.itgears.brss')
-    exit                = engine.get_dbus_method('exit', 'com.itgears.brss')
-
-    window = Gtk.Window()
-    window.connect("destroy", Gtk.main_quit)
-    window.set_default_size(1200, 400)
-    view = View()
-    window.add(view)
-    window.show_all()
-    #~ view.show_article(art)
-    Gtk.main()

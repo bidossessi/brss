@@ -9,15 +9,15 @@ import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 bus                 = dbus.SessionBus()
-engine              = bus.get_object('com.itgears.brss', '/com/itgears/brss/Engine')
-create              = engine.get_dbus_method('create', 'com.itgears.brss')
-get_categories      = engine.get_dbus_method('get_categories', 'com.itgears.brss')
-get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'com.itgears.brss')
-get_articles_for    = engine.get_dbus_method('get_articles_for', 'com.itgears.brss')
-get_article         = engine.get_dbus_method('get_article', 'com.itgears.brss')
-exit                = engine.get_dbus_method('exit', 'com.itgears.brss')
-update              = engine.get_dbus_method('update', 'com.itgears.brss')
-get_menu_items      = engine.get_dbus_method('get_menu_items', 'com.itgears.brss')
+engine              = bus.get_object('com.itgears.BRss.Engine', '/com/itgears/BRss/Engine')
+create              = engine.get_dbus_method('create', 'com.itgears.BRss.Engine')
+get_categories      = engine.get_dbus_method('get_categories', 'com.itgears.BRss.Engine')
+get_feeds_for       = engine.get_dbus_method('get_feeds_for', 'com.itgears.BRss.Engine')
+get_articles_for    = engine.get_dbus_method('get_articles_for', 'com.itgears.BRss.Engine')
+get_article         = engine.get_dbus_method('get_article', 'com.itgears.BRss.Engine')
+exit                = engine.get_dbus_method('exit', 'com.itgears.BRss.Engine')
+update              = engine.get_dbus_method('update', 'com.itgears.BRss.Engine')
+get_menu_items      = engine.get_dbus_method('get_menu_items', 'com.itgears.BRss.Engine')
 
 def log(*args):
     print args
