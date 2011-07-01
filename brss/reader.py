@@ -96,8 +96,8 @@ class Reader (Gtk.Window, GObject.GObject):
         #signals
         self.__connect_signals()
         self.__get_engine()
-        self.__confs = None
-        self.__get_confs()     
+        self.__confs = self.get_configs()
+        self.log.enable_debug(self.__confs.get('debug'))
         # ready to go
         self.emit('loaded')
         
@@ -420,16 +420,19 @@ class Reader (Gtk.Window, GObject.GObject):
             error_handler=self.__to_log)
     def __set_confs(self, confs):
         self.__confs = confs
+        self.log.enable_debug(confs.get('debug'))
+
     def __edit_prefs(self, *args):
         self.__get_confs()
         kmap = {'hide-read':'bool', 'interval':'int', 'max':'int', 
-            'notify':'bool', 'otf':'bool'}
+            'notify':'bool', 'otf':'bool', 'debug':'bool'}
         hmap = {
             'hide-read':'Hide Read Items', 
             'interval':'Update interval (in minutes)', 
             'max':'Maximum number of articles to keep (excluding starred)',
             'otf':'Start downloading articles for new feeds on-the-fly',
             'notify':'Show notification on updates',
+            'debug':'Enable detailed logs',
             }
         data = []
         for k,v in self.__confs.iteritems():

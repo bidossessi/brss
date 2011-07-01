@@ -166,7 +166,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         try:
             return date.strftime (locale.nl_langinfo(locale.D_FMT))
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
             return ""   
     def __format_date(self, column, cell, model, iter, col):
         cell.set_property('text', make_date(model.get_value(iter, 3)))
@@ -241,7 +241,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         niter = model.iter_next(iter)
         try: self.listselect.select_iter(niter)
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
     
     def previous_item(self, *args):
         model, iter = self.listselect.get_selected()

@@ -223,7 +223,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             if stock:
                 gmap[a['id']] = a['id']
         except Exception, e: 
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
         r = (
             a['type'],
             a['id'],
@@ -261,7 +261,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             #~ niter = model.iter_next(iter)
             #~ try: self.menuselect.select_iter(niter)
             #~ except Exception, e:
-                #~ self.log.warning("{0}: {1}".format(self, e))
+                #~ self.log.exception(e) 
     #~ 
     #~ def previous_item(self, *args): #FIXME: doesn't work
         #~ self.log.debug('Selecting previous feed')
@@ -307,7 +307,8 @@ class Tree (Gtk.VBox, GObject.GObject):
                 try:
                     self.store.set_value(iter, self.lmap.index(k), v)
                 except Exception, e:
-                    self.log.warning("{0}: {1}".format(self, e))
+                    #~ self.log.exception(e)
+                    pass # we don't really care about this one 
             piter = self.store.iter_parent(iter)
             if piter:
                 self.__recount_category(self.store, piter)
@@ -448,6 +449,7 @@ class TreeMenu(Gtk.Menu):
         self._treeview = tree.menuview
         self._treeview.connect('button-release-event', self._on_event)
         self._treeview.connect('key-release-event', self._on_event)
+        self._tree.connect('item-selected', self._monitor_instance)
 
     def clean(self):
         for child in self.get_children():
@@ -456,18 +458,22 @@ class TreeMenu(Gtk.Menu):
             menuitem.disconnect(signal_id)
         self._signal_ids = []
 
-    def popup(self, event, instance):
+    def popup(self, event, item):
         #~ print("{0}: menu popping up, dirty {1}".format(self, self._dirty))
-        self._create(instance)
+        self._create(item)
         if hasattr(event, "button"):
             Gtk.Menu.popup(self, None, None, None, None,
                        event.button, event.time)
     def _create(self, item):
+        if not self._dirty:
+            return
         self.clean()
-
-        for i in ['Mark all as read', 'Update', 'Edit', 'Delete', 'sep',
-                    'Add a Category', 'Add a Feed']:
-            
+    
+        mlist = ['Mark all as read', 'Update', 'Edit', 'Delete', 'sep',
+                        'Add a Category', 'Add a Feed']
+        if item['id'] == "uncategorized":
+            mlist.pop(mlist.index('Edit'))
+        for i in mlist:
             if i == 'sep':
                 sep = Gtk.SeparatorMenuItem()
                 sep.show()
@@ -484,8 +490,10 @@ class TreeMenu(Gtk.Menu):
             self.append(menuitem)
         
     def _on_menuitem__activate(self, menuitem, callname, item):
-        if not item['id'] == "uncategorized":
             self._tree.run_dcall(callname, item)
+
+    def _monitor_instance(self, *args):
+        self._dirty = True
 
     def _on_event(self, treeview, event):
         """Respond to mouse click or key press events in a GtkTree."""

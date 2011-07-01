@@ -79,11 +79,10 @@ class FeedGetter(threading.Thread):
         Fetch informations and articles for a feed.
         Returns the feed.
         """
-        time.sleep(10)
         try:
             f = feedparser.parse(feed['url'])
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
             self.result = feed
             return
         # get (or set default) infos from feed
@@ -159,7 +158,7 @@ class FeedGetter(threading.Thread):
             web_file.close()
             return {'name':name, 'url':src, 'article_id':article_id}
         except Exception, e:
-            self.log.warning("Couldn't get remote file: {0}".format(e))  
+            self.log.exception(e)  
     def __find_images_in_article(self, content):
         """Searches for img tags in article content."""
         images = []
@@ -191,7 +190,7 @@ class FeedGetter(threading.Thread):
             else:
                 self.log.debug("No favicon available for {0}".format(feed['name']))
         except Exception, e:
-            self.log.warning( "Couldn't get favicon for {0}: {1}".format(feed['name'], e))
+            self.log.exception(e) 
 
     def __check_feed_item(self, feed_item):
         """
@@ -203,7 +202,7 @@ class FeedGetter(threading.Thread):
             dp = feed_item.date_parsed
             secs = time.mktime(datetime.datetime(dp[0], dp[1], dp[2], dp[3], dp[4], dp[5], dp[6]).timetuple())
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
             secs = make_time()
         title = 'Without title'
         if hasattr(feed_item,'title'):
@@ -214,7 +213,7 @@ class FeedGetter(threading.Thread):
             try:
                 content = feed_item.content[0].get('value').encode("utf-8")
             except Exception, e:
-                self.log.warning("{0}: {1}".format(self, e))
+                self.log.exception(e) 
         else:
             if hasattr(feed_item,'description'):
                 if feed_item.description is not None:
@@ -371,6 +370,7 @@ class Engine (dbus.service.Object):
         self.__hide_read = bool(confs.get('hide-read'))
         self.__show_notif = bool(confs.get('notify'))
         self.__otf = bool(confs.get('otf'))
+        self.log.enable_debug(confs.get('debug'))
 
         
     @dbus.service.method('com.itgears.BRss.Engine')
@@ -437,7 +437,7 @@ class Engine (dbus.service.Object):
                 self.warning('Couldn\'t find any article matching "{0}"'.format(string))
             return arts
         except Exception, e:
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
             self.warning('Search for "{0}" failed!'.format(string))
 
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
@@ -496,6 +496,7 @@ class Engine (dbus.service.Object):
     @dbus.service.method('com.itgears.BRss.Engine')
     def start(self):
         Gtk.main()
+        self.__update_all()
 
     @dbus.service.method('com.itgears.BRss.Engine')
     def exit(self):
@@ -511,6 +512,7 @@ class Engine (dbus.service.Object):
     ## 1. initialization
     def __init__(self, base_path="."):
         self.base_path      = base_path
+        self.favicon_path   = os.path.join(base_path, 'favicons')
         self.images_path    = os.path.join(base_path, 'images')
         self.db_path        = os.path.join(base_path, 'brss.db')
         self.conn           = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -529,6 +531,7 @@ class Engine (dbus.service.Object):
         self.__show_notif       = self.__get_config('notify')
         self.__otf              = self.__get_config('otf')
         self.__added_count      = 0
+        self.log.enable_debug(self.__get_config('debug'))
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.BRss.Engine', bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/BRss/Engine')
@@ -800,7 +803,7 @@ class Engine (dbus.service.Object):
         try:
             os.unlink(os.path.join(self.favicon_path,feed['id']))
         except Exception, e: # not there?
-            self.log.warning("{0}: {1}".format(self, e))
+            self.log.exception(e) 
         q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
         cursor = self.conn.cursor()        
         cursor.execute(q)
@@ -823,7 +826,7 @@ class Engine (dbus.service.Object):
                     try:
                         os.unlink(filename)
                     except Exception, e: 
-                        self.log.warning("{0}: {1}".format(self, e))
+                        self.log.exception(e) 
 
             # now remove image entries in DB
             q = 'DELETE FROM images WHERE article_id = "{0}"'.format(art_id)
@@ -1032,6 +1035,7 @@ class Engine (dbus.service.Object):
             INSERT INTO config VALUES('hide-read', '0');
             INSERT INTO config VALUES('otf', '0');
             INSERT INTO config VALUES('notify', '0');
+            INSERT INTO config VALUES('debug', '0');
             INSERT INTO categories VALUES('uncategorized', 'Uncategorized');
             ''')
         self.conn.commit()
