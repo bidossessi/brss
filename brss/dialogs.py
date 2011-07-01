@@ -124,7 +124,7 @@ class Dialog(Gtk.Dialog):
         for widget in widget_list:
             header = self.__make_header(widget.header)
             if type(widget) == CheckBtn:
-                box.attach(widget, lpid, lpid+1, tpid, tpid+1, Gtk.AttachOptions.FILL|Gtk.AttachOptions.EXPAND, Gtk.AttachOptions.FILL)
+                box.attach(widget, lpid, lpid+2, tpid, tpid+1, Gtk.AttachOptions.FILL|Gtk.AttachOptions.EXPAND, Gtk.AttachOptions.FILL)
             else:
                 box.attach(header, lpid, lpid+1, tpid, tpid+1, Gtk.AttachOptions.FILL, Gtk.AttachOptions.FILL)
                 box.attach(widget, lpid+1, lpid+2, tpid, tpid+1, Gtk.AttachOptions.FILL|Gtk.AttachOptions.EXPAND, Gtk.AttachOptions.FILL)

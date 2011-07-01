@@ -86,6 +86,8 @@ class View (Gtk.VBox, GObject.GObject):
         self.pack_start(mal, True, True,0)
         GObject.type_register(View)
         self.valid_links = ['file:']
+    def __repr__(self):
+        return "View"
 
     def show_article(self, art_tuple):
         self.show()
@@ -118,11 +120,33 @@ class View (Gtk.VBox, GObject.GObject):
             return 1 # Don't let browse
     
     def clear(self, caller):
-        self.link_button.set_label("No Article to show")
-        nd = "<html><h1>No Article to show</h1></html>"""
+        self.link_button.set_label("No Article")
+        nd = """
+        <html>
+        <h1>No Article to show</h1>
+        <p>The item you selected doesn't seem to have any articles available.</p>
+        <p><em>If this doesn't change after a while, maybe you should check 
+        your feeds' validity.</em></p>
+        </html>"""
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")
         #~ self.hide()
-
+    def no_engine(self, caller):
+        self.link_button.set_label("No Engine")
+        nd = """
+            <html>
+            <head>
+            <style>
+            .red {color:red}
+            </style>
+            </head>
+            <h1>The engine is not responding</h1>
+            <p>For some reason, BRss' <strong class="red">Feed Engine</strong> is not responding.</p>
+            <p>Please try and restart the engine.<br/>
+            You can then reconnect the reader from the <strong>Feeds</strong> menu.</p>
+            <p><em>Tip: You can also simply restart the reader, as it tries 
+            to launch the engine at startup.</em></p>
+            </html>"""
+        self.feedview.load_string(nd, "text/html", "utf-8", "file:")
     def do_link_hovered(self, url):
         self.log.debug("{0}: Hovered on {1}".format(self, url))
     def do_link_clicked(self, url):

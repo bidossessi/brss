@@ -113,6 +113,9 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.__setup_icons(make_path('pixmaps','brss-feed-missing.svg'), 'missing')
         self.__setup_icons(make_path('pixmaps','starred.svg'), 'starred')
         self.__connect_signals()
+
+    def __repr__(self):
+        return "Tree"
         
     def __connect_signals(self):
         self.menuselect.connect("changed", self.__selection_changed, "l")
@@ -237,6 +240,17 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.menuselect.unselect_all()
         self.current_item = None
 
+    def select_current(self, *args):
+        model, iter = self.menuselect.get_selected()
+        if iter:
+            self.menuselect.unselect_iter(iter)
+            self.menuselect.select_iter(iter)
+        else:
+            model, iter = self.sselect.get_selected()
+            if iter:
+                self.sselect.unselect_iter(iter)
+                self.sselect.select_iter(iter)
+
     #~ def next_item(self, *args):
         #~ self.log.debug('Selecting next feed')
         #~ model, iter = self.menuselect.get_selected()
@@ -294,19 +308,27 @@ class Tree (Gtk.VBox, GObject.GObject):
                     self.store.set_value(iter, self.lmap.index(k), v)
                 except Exception, e:
                     self.log.warning("{0}: {1}".format(self, e))
-                    
-    def __count_unread(self, model, path, iter, data):
-        if model.get_value(iter, 0) == 'feed':
-            self.c += model.get_value(iter, 3)
-
-    def __row_changed(self, model, path, iter):            
-        self.c = 0
-        model.foreach(self.__count_unread, None)
-        iter = self.__search(0, 'unread', self.sstore)
+            piter = self.store.iter_parent(iter)
+            if piter:
+                self.__recount_category(self.store, piter)
+    
+    def __recount_category(self, model, iter):
+        c = 0
+        citer = model.iter_children(iter)
+        while citer:
+            c += model.get_value(citer, self.lmap.index('count'))
+            citer = model.iter_next(citer)
+        self.store.set_value(iter, self.lmap.index('count'), c)
+        self.__recount_unread(model)
+    def __recount_unread(self, model):
+        c = 0
+        iter = model.get_iter_first()
         if iter:
-            self.__update_count(self.sstore, iter, 3, self.c, ['replace'])
-                
-
+            while iter:
+                c += model.get_value(iter, self.lmap.index('count'))
+                iter = model.iter_next(iter)
+            uiter = self.__search(0, 'unread', self.sstore)
+            self.__update_count(self.sstore, uiter, 3, c, ['replace'])                
     def update_starred(self, ilist, item):
         # if item['starred'] is 0, we go minus
         iter = self.__search(0, 'starred', self.sstore)
@@ -324,14 +346,9 @@ class Tree (Gtk.VBox, GObject.GObject):
                 self.lmap.index('count'), 
                 item[col], 
                 flags)
-            if self.store.iter_parent(iter):
-                self.__update_count(
-                    self.store, 
-                    self.store.iter_parent(iter), 
-                    self.lmap.index('count'), 
-                    item[col], 
-                    flags)
-    
+            piter = self.store.iter_parent(iter)
+            if piter:
+                self.__recount_category(self.store, piter)
 
     def __update_count (self, model, iter, col, var, flags):
         if 'replace' in flags:
@@ -360,10 +377,6 @@ class Tree (Gtk.VBox, GObject.GObject):
         """Load the given data into the left menuStore"""
         # return the first iter
         self.store.clear()
-        try:
-            self.store.disconnect_by_func(self.__row_changed)
-        except Exception, e:
-            self.log.debug("{0}: {1}".format(self, e))
         if data:
             row = None
             for item in data:
@@ -372,19 +385,20 @@ class Tree (Gtk.VBox, GObject.GObject):
                 if item['type'] == 'feed':
                     self.store.append(row, self.__format_row(item))
         self.menuview.expand_all()
-        self.store.connect('row-changed', self.__row_changed)
-
 
     def insert_row(self, item):
         # start with categories:
         if item['type'] == 'category':
-            self.store.append(None, self.__format_row(item))
+            iter = self.store.append(None, self.__format_row(item))
         elif item['type'] == 'feed':
             iter = self.__search(1,item['category'])
+            if not iter:# drop them in uncategorized. DnD should be able to do the rest, when it works...
+                iter = self.__search(0,'uncategorized')
             if iter:
                 self.store.append(iter, self.__format_row(item))
                 self.menuview.expand_row(self.store.get_path(iter), False)
-    
+        self.__recount_unread(self.store)
+        
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
@@ -419,7 +433,8 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.log.debug("{0}: selecting 'Unread' folder".format(self))
         iter = self.__search(0, 'unread', self.sstore)
         self.sselect.select_iter(iter)
-        
+    def do_dcall_request(self, *args):
+        self.log.debug("{0}: {1}".format(self,args))
 class TreeMenu(Gtk.Menu):
     """
     TreeMenu extends the standard Gtk.Menu by adding methods 

@@ -90,7 +90,7 @@ class Status (Gtk.Alignment):
             self.add_img.show()
         if context == "warning":
             self.warning_img.show()
-        if context == "error":
+        if context == "critical":
             self.error_img.show()
 
     def clear(self):

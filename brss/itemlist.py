@@ -155,6 +155,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.listselect.set_select_function(self.__skip_toggles, None)
         self.fbox.set_no_show_all(True)
         self.search_on = False
+    def __repr__(self):
+        return "ItemList"
         
     def __get_weight(self, read):
         if read and int(read) > 0:
@@ -182,7 +184,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         return r
         
     def load_list(self, data):
-        self.log.debug("{0}: Loading articles")
+        self.log.debug("{0}: Loading articles".format(self))
         store = self.listview.get_model()
         store.clear()
         # store structure (id, read, starred, date, title, url, weight, feed_id)
@@ -321,17 +323,18 @@ class ItemList (Gtk.VBox, GObject.GObject):
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)    
     # convenience
-    #~ def do_item_selected(self, item):
-        #~ print 'Item selected: ', item
-    #~ def do_star_toggled(self, item):
-        #~ print "Star this: ", item
-    #~ def do_read_toggled(self, item):
-        #~ print "Toggle this: ", item
-    #~ def do_search_requested(self, item):
-        #~ print "Search for: ", item
-    #~ def do_no_data(self):
-        #~ print "No data found!"
+    def do_item_selected(self, item):
+        self.log.debug('{0}: Item selected {1}'.format(self, item))
+    def do_star_toggled(self, item):
+        self.log.debug('{0}: Star this {1}'.format(self, item))
+    def do_read_toggled(self, item):
+        self.log.debug('{0}: Toggle this {1}'.format(self, item))
+    def do_search_requested(self, item):
+        self.log.debug('{0}: Search for {1}'.format(self, item))
+    def do_no_data(self):
+        self.log.debug('{0}: No data found'.format(self))
     def do_list_loaded(self):
+        self.log.debug("{0}: selecting first item".format(self))
         self.listselect.select_path((0,))
 
 class ItemListMenu(Gtk.Menu):

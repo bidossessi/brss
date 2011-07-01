@@ -78,7 +78,7 @@ class Reader (Gtk.Window, GObject.GObject):
         }
 
     def __repr__(self):
-        return "BRssReader"
+        return "Reader"
     def __init__(self, base_path="."):
         Gtk.Window.__init__(self)
         self.__gobject_init__()
@@ -94,8 +94,10 @@ class Reader (Gtk.Window, GObject.GObject):
         # layout
         self.__layout_ui()
         #signals
-        self.__get_engine()            
         self.__connect_signals()
+        self.__get_engine()
+        self.__confs = None
+        self.__get_confs()     
         # ready to go
         self.emit('loaded')
         
@@ -119,13 +121,15 @@ class Reader (Gtk.Window, GObject.GObject):
         self.get_article         = self.engine.get_dbus_method('get_article', 'com.itgears.BRss.Engine')
         self.toggle_starred      = self.engine.get_dbus_method('toggle_starred', 'com.itgears.BRss.Engine')
         self.toggle_read         = self.engine.get_dbus_method('toggle_read', 'com.itgears.BRss.Engine')
+        self.stop_update         = self.engine.get_dbus_method('stop_update', 'com.itgears.BRss.Engine')
         self.count_special       = self.engine.get_dbus_method('count_special', 'com.itgears.BRss.Engine')
         self.get_configs         = self.engine.get_dbus_method('get_configs', 'com.itgears.BRss.Engine')
         self.set_configs         = self.engine.get_dbus_method('set_configs', 'com.itgears.BRss.Engine')
         self.import_opml         = self.engine.get_dbus_method('import_opml', 'com.itgears.BRss.Engine')
         self.export_opml         = self.engine.get_dbus_method('export_opml', 'com.itgears.BRss.Engine')
-        self.ag.get_action('Reconnect').set_visible(False)
-        self.status.message('ok', 'Connected to engine')
+        self.rag.set_visible(False)
+        self.ag.set_visible(True)
+        self.__connect_engine_signals()
         self.log.debug("{0}: Connected to feed engine {1}".format(self, self.engine))
     def __create_menu(self):
         ui_string = """<ui>
@@ -168,7 +172,7 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Reconnect' action='Reconnect'/>
                     <separator />
                     <toolitem name='Update all' action='Update all'/>
-                    <toolitem name='Stop' action='Stop update'/>
+                    <toolitem name='Stop' action='StopUpdate'/>
                     <separator name='sep2'/>
                     <toolitem name='PreviousArticle' action='PreviousArticle'/>
                     <toolitem name='NextArticle' action='NextArticle'/>
@@ -183,46 +187,61 @@ class Reader (Gtk.Window, GObject.GObject):
 
 
 
+        self.mag = Gtk.ActionGroup('MenuActions')
+        mactions = [
+                ('FeedMenu', None, '_Feeds'),
+                ('EditMenu', None, 'E_dit'),
+                ('NetworkMenu', None, '_Network'),
+                ('ViewMenu', None, '_View'),
+                ('HelpMenu', None, '_Help'),
+                ('About', "gtk-about", '_About', None, 'About', self.__about),
+        ]
+        self.mag.add_actions(mactions)
         self.ag = Gtk.ActionGroup('WindowActions')
         actions = [
-                ('FeedMenu', None, '_Feeds'),
                 ('New feed', 'feed', '_New feed', '<control>N', 'Add a feed', self.__add_feed),
                 ('New category', "gtk-directory", 'New _category', '<alt>C', 'Add a category', self.__add_category),
                 ('Delete', "gtk-clear", 'Delete', 'Delete', 'Delets a feed or a category', self.__delete_item),
                 ('Import feeds', "gtk-redo", 'Import feeds', None, 'Import a feedlist', self.__import_feeds),
                 ('Export feeds', "gtk-undo", 'Export feeds', None, 'Export a feedlist', self.__export_feeds),
-                ('Reconnect', "gtk-disconnect", '_Reconnect', None, 'Try and reconnect to the feed engine', self.__reconnect),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
-                ('EditMenu', None, 'E_dit'),
                 ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edit the selected element'),
                 ('Preferences', "gtk-preferences", '_Preferences', '<control>P', 'Configure the engine', self.__edit_prefs),
-                ('NetworkMenu', None, '_Network'),
                 ('Update', None, '_Update', '<control>U', 'Update the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
                 ('PreviousArticle', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous_article),
                 ('NextArticle', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next_article),
                 ('PreviousFeed', "gtk-goto-first", 'Previous Feed', '<control><shift>b', 'Go to the previous news feed', self.__previous_feed),
                 ('NextFeed', "gtk-goto-last", 'Next Feed', '<control><shift>n', 'Go to the next news feed', self.__next_feed),
-                ('Stop update', "gtk-stop", 'Stop', None, 'Stop update'),
-                ('ViewMenu', None, '_View'),
-                ('HelpMenu', None, '_Help'),
-                ('About', "gtk-about", '_About', None, 'About', self.__about),
-                ]
+                ('StopUpdate', "gtk-stop", 'Stop', None, 'StopUpdate', self.__stop_updates),
+            ]
         tactions = [
                 ('Find', "gtk-find", 'Find', '<control>F', 'Search for a term in the articles', self.__toggle_search),
                 ('FullScreen', "gtk-fullscreen", 'Fullscreen', 'F11', '(De)Activate fullscreen', self.__toggle_fullscreen),
-                ]
-
+            ]
         self.ag.add_actions(actions)
         self.ag.add_toggle_actions(tactions)
+        # break reconnect into its own group
+        self.rag = Gtk.ActionGroup("Rec")
+        ractions = [
+                ('Reconnect', "gtk-disconnect", '_Reconnect', None, 'Try and reconnect to the feed engine', self.__reconnect),
+            ]
+        self.rag.add_actions(ractions)
         self.ui = Gtk.UIManager()
+        self.ui.insert_action_group(self.mag, 0)
         self.ui.insert_action_group(self.ag, 0)
+        self.ui.insert_action_group(self.rag, 0)
         self.ui.add_ui_from_string(ui_string)
         self.add_accel_group(self.ui.get_accel_group())
 
     def __reset_title(self, *args):
         self.set_title('BRss Reader')
-
+    
+    def __stop_updates(self, *args):
+        self.stop_update(
+            reply_handler=self.__to_log,
+            error_handler=self.__to_log)
+        self.ag.get_action('StopUpdate').set_sensitive(False)
     def __layout_ui(self):
         self.log.debug("{0}: Laying out User Interface".format(self))
         self.__create_menu()
@@ -238,7 +257,7 @@ class Reader (Gtk.Window, GObject.GObject):
         box = Gtk.VBox(spacing=3)
         box.pack_start(self.ui.get_widget('/Menubar'), False, True, 0)
         box.pack_start(self.ui.get_widget('/Toolbar'), False, True, 0)
-        widget = self.ui.get_widget("/Toolbar/Stop")
+        widget = self.ag.get_action('StopUpdate')
         widget.set_sensitive(False)
         box.pack_start(al, True, True, 0)
         box.pack_start(self.status, False, False, 0)
@@ -250,21 +269,21 @@ class Reader (Gtk.Window, GObject.GObject):
         self.set_icon_from_file(make_path('icons','brss.svg'))
         #~ self.set_default_icon(get_pixbuf())
         self.alert = Alerts(self)
+        self.connect("destroy", self.quit)
         self.show_all()
         
 
     def __connect_signals(self):    # signals
-        self.log.debug("{0}: Connecting all signals".format(self)))
-        self.connect("destroy", self.quit)
-        self.connect('loaded', self.__populate_menu)
+        self.log.debug("{0}: Connecting all signals".format(self))
         self.connect('next-article', self.ilist.next_item)
         self.connect('previous-article', self.ilist.previous_item)
         #~ self.connect('next-feed', self.tree.next_item)#TODO: implement
         #~ self.connect('previous-feed', self.tree.previous_item)#TODO: implement
         self.connect('search-toggled', self.ilist.toggle_search)
         self.connect_after('no-engine', self.__no_engine)
+        self.connect_after('no-engine', self.view.no_engine)
         self.tree.connect('item-selected', self.__load_articles)
-        self.tree.connect_after('item-selected', self.__feed_selected)
+        #~ self.tree.connect_after('item-selected', self.__feed_selected)
         self.tree.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('item-selected', self.__load_article)
         self.ilist.connect('item-selected', self.__update_title)
@@ -281,9 +300,14 @@ class Reader (Gtk.Window, GObject.GObject):
         self.view.connect('link-clicked', self.__to_browser)
         self.view.connect('link-hovered-in', self.__status_info)
         self.view.connect('link-hovered-out', self.__status_info)
+
+    def __connect_engine_signals(self):
         self.engine.connect_to_signal('notice', self.status.message)
         self.engine.connect_to_signal('added', self.tree.insert_row)
         self.engine.connect_to_signal('updated', self.tree.update_row)
+        self.engine.connect_to_signal('updating', self.__update_started)
+        self.engine.connect_to_signal('complete', self.__update_done)
+        self.engine.connect_to_signal('complete', self.tree.select_current)
         # might want to highlight these a bit more
         self.engine.connect_to_signal('warning', self.status.warning)
     
@@ -390,16 +414,25 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
         if r == Gtk.ResponseType.OK:
             self.__create(item)
-    
+    def __get_confs(self):
+        self.get_configs(
+            reply_handler=self.__set_confs,
+            error_handler=self.__to_log)
+    def __set_confs(self, confs):
+        self.__confs = confs
     def __edit_prefs(self, *args):
-        confs = self.get_configs()
-        kmap = {'hide-read':'bool', 'interval':'int', 'max':'int'}
+        self.__get_confs()
+        kmap = {'hide-read':'bool', 'interval':'int', 'max':'int', 
+            'notify':'bool', 'otf':'bool'}
         hmap = {
             'hide-read':'Hide Read Items', 
             'interval':'Update interval (in minutes)', 
-            'max':'Maximum number of articles to keep'}
+            'max':'Maximum number of articles to keep (excluding starred)',
+            'otf':'Start downloading articles for new feeds on-the-fly',
+            'notify':'Show notification on updates',
+            }
         data = []
-        for k,v in confs.iteritems():
+        for k,v in self.__confs.iteritems():
             data.append({
                 'type':kmap.get(k),
                 'name':k, 
@@ -414,6 +447,7 @@ class Reader (Gtk.Window, GObject.GObject):
             self.set_configs(item,
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
+        self.__get_confs()
     def __about(self, *args):
         """Shows the about message dialog"""
         from brss import __version__, __maintainers__
@@ -471,7 +505,7 @@ class Reader (Gtk.Window, GObject.GObject):
             reply_handler=self.__to_log,
             error_handler=self.__to_log)
     def __update(self, item):
-        self.log.debug("About to update item: {0}".format(item))
+        self.log.debug("{0} Requesting update for: {1}".format(self, item))
         self.update(item,
             reply_handler=self.__to_log,
             error_handler=self.__to_log)
@@ -501,8 +535,7 @@ class Reader (Gtk.Window, GObject.GObject):
             self.tree.insert_row(item)
     def __handle_dcall(self, caller, name, item):
         if name in ['Update', 'Update all']:
-            self.log.debug("Running all feeds update")
-            self.__toggle_stop()
+            self.log.debug("updating {0}".format(item))
             self.update(item,
                 reply_handler=self.__update_done,
                 error_handler=self.__to_log)
@@ -524,15 +557,20 @@ class Reader (Gtk.Window, GObject.GObject):
         self.search_for(string,
                 reply_handler=self.ilist.load_list,
                 error_handler=self.__to_log)
-    def __toggle_stop(self):
-        gmap = {True:False, False: True}
-        widget = self.ui.get_widget('/Toolbar/Stop')
-        widget.set_sensitive(
-            gmap.get(widget.get_sensitive()))
+    def __toggle_in_update(self, b):
+        gmap = {True:False, False:True}
+        a = self.ag.get_action('StopUpdate')
+        a.set_sensitive(b)
+        a = self.ag.get_action('Update all')
+        a.set_sensitive(gmap.get(b))
     def __toggle_search(self, *args):
         self.emit('search-toggled')
+    def __update_started(self, *args):
+        self.log.debug("Toggling update status to True")
+        self.__toggle_in_update(True)
     def __update_done(self, *args):
-        self.__toggle_stop()
+        self.log.debug("Toggling update status to False")
+        self.__toggle_in_update(False)
     def __update_title(self, caller, item):
         self.set_title(item['title'])
     def __status_info(self, caller, message=None):
@@ -579,26 +617,26 @@ class Reader (Gtk.Window, GObject.GObject):
             self.is_fullscreen = True
     def __reconnect(self, *args):
         self.__get_engine()
-        self.__connect_signals()
+        self.emit('loaded')
     def __no_engine(self, *args):
         self.log.warning("Lost connection with engine!")
-        self.status.message('error', "Cannot connect to the Feed Engine")
-        self.ag.get_action('Reconnect').set_visible(True)
-    def __feed_selected(self, caller, item):
-        if item['type'] in ['feed', 'category']:
-            self.status.message('info', "[{0}] {1}".format(
-                item['type'].capitalize(),
-                item['name'].encode('utf-8')))
-        else:
-            self.status.clear()
+        self.status.message('critical', "Cannot connect to the Feed Engine")
+        self.rag.set_visible(True)
+        self.ag.set_visible(False)
+        self.__update_done()
+    #~ def __feed_selected(self, caller, item):
+        #~ self.status.message('info', "{0}".format(
+                #~ item['name'].encode('utf-8')))
     def quit(self, *args):
         Gtk.main_quit()
     
     def start(self):
         Gtk.main()
 
-    #~ def do_loaded(self, *args):
-        #~ print "Reader loaded"
+    def do_loaded(self, *args):
+        self.log.debug("Starting BRss Reader")
+        self.__populate_menu()
+        self.status.message('ok', 'Connected to engine')
 
 
 class ReaderService(dbus.service.Object):
