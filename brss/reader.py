@@ -425,11 +425,13 @@ class Reader (Gtk.Window, GObject.GObject):
     def __edit_prefs(self, *args):
         self.__get_confs()
         kmap = {'hide-read':'bool', 'interval':'int', 'max':'int', 
-            'notify':'bool', 'otf':'bool', 'debug':'bool'}
+            'notify':'bool', 'otf':'bool', 'debug':'bool', 
+            'auto-update':'bool'}
         hmap = {
             'hide-read':'Hide Read Items', 
             'interval':'Update interval (in minutes)', 
             'max':'Maximum number of articles to keep (excluding starred)',
+            'auto-update':'Enable the engine to download new articles automatically.',
             'otf':'Start downloading articles for new feeds on-the-fly',
             'notify':'Show notification on updates',
             'debug':'Enable detailed logs',
