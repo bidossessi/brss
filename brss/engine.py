@@ -158,7 +158,8 @@ class FeedGetter(threading.Thread):
             web_file.close()
             return {'name':name, 'url':src, 'article_id':article_id}
         except Exception, e:
-            self.log.exception(e)  
+            self.log.exception(e)
+            
     def __find_images_in_article(self, content):
         """Searches for img tags in article content."""
         images = []
@@ -191,6 +192,18 @@ class FeedGetter(threading.Thread):
                 self.log.debug("No favicon available for {0}".format(feed['name']))
         except Exception, e:
             self.log.exception(e) 
+            #try The naufrago way
+            try:
+                split = feed['url'].split("/")
+                src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
+                web_file = urllib2.urlopen(src, timeout=10)
+                local_file = open(fav, 'w')
+                local_file.write(webfile.read())
+                local_file.close()
+                webfile.close()
+                self.log.debug("Favicon found for {0}".format(feed['name']))
+            except Exception, e:
+                self.log.exception(e)
 
     def __check_feed_item(self, feed_item):
         """
@@ -541,8 +554,9 @@ class Engine (dbus.service.Object):
             self.__loop_callback, 
             self.__loop_done)
         # ok, looks like we can start
-        Notify.init('BRss')
-        self.__notify_startup()
+        if self.__show_notif:
+            Notify.init('BRss')
+            self.__notify_startup()
         self.log.debug("Starting {0}".format(self))
         
     def __set_polling(self, interval):
@@ -1033,7 +1047,7 @@ class Engine (dbus.service.Object):
             INSERT INTO config VALUES('max', '10');
             INSERT INTO config VALUES('interval', '60');
             INSERT INTO config VALUES('hide-read', '0');
-            INSERT INTO config VALUES('otf', '0');
+            INSERT INTO config VALUES('otf', '1');
             INSERT INTO config VALUES('notify', '0');
             INSERT INTO config VALUES('debug', '0');
             INSERT INTO categories VALUES('uncategorized', 'Uncategorized');

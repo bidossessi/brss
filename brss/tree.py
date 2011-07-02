@@ -108,6 +108,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         menu = TreeMenu(self)
         self.current_item = None
         #~ self.__setup_dnd() #FIXME: DnD is broken !!!
+        self.__favlist = []
         self.__setup_icons(make_path('pixmaps','brss-feed.svg'), 'feed')
         self.__setup_icons(make_path('pixmaps','logo2.svg'), 'logo')
         self.__setup_icons(make_path('pixmaps','brss-feed-missing.svg'), 'missing')
@@ -126,6 +127,8 @@ class Tree (Gtk.VBox, GObject.GObject):
     def __setup_icons(self, path, stock_id):
         try:
             assert os.path.exists(path)
+            assert not path in self.__favlist
+            
             factory = Gtk.IconFactory()
             s = Gtk.IconSource()
             s.set_filename(path)
@@ -135,7 +138,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             factory.add_default()
             return True
         except Exception, e: 
-            self.log.debug("{0}: {1}".format(self, e))
+            self.log.exception(e)
             return False
     
 
@@ -149,7 +152,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             name1 = model.get_value(iter1, 2).lower()
             name2 = model.get_value(iter2, 2).lower()
         except Exception, e:
-            self.log.debug("{0}: {1}".format(self, e))
+            self.log.exception(e)
             name1 = model.get_value(iter1, 2)
             name2 = model.get_value(iter2, 2)
         #3. put general on top
@@ -311,6 +314,12 @@ class Tree (Gtk.VBox, GObject.GObject):
                     pass # we don't really care about this one 
             piter = self.store.iter_parent(iter)
             if piter:
+                # setup favicon
+                stock_id = self.store.get_value(iter, self.lmap.index('id')) 
+                path = os.path.join(self.favicon_path, stock_id)
+                stock = self.__setup_icons(path, stock_id)
+                if stock:
+                    self.store.set_value(iter, self.lmap.index('stock-id'), stock_id)
                 self.__recount_category(self.store, piter)
     
     def __recount_category(self, model, iter):
