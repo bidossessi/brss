@@ -125,10 +125,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.sview.connect("row-activated", self.__row_activated)
         
     def __setup_icons(self, path, stock_id):
-        try:
-            assert os.path.exists(path)
-            assert not path in self.__favlist
-            
+        if os.path.exists(path) and os.path.getsize(path) and not path in self.__favlist:                
             factory = Gtk.IconFactory()
             s = Gtk.IconSource()
             s.set_filename(path)
@@ -137,10 +134,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             factory.add(stock_id, iconset)
             factory.add_default()
             return True
-        except Exception, e: 
-            self.log.exception(e)
-            return False
-    
+        return False
 
     def __sort_type(self, model, iter1, iter2, tp):
         #1. make sure that starred stays below unread:
@@ -304,6 +298,7 @@ class Tree (Gtk.VBox, GObject.GObject):
 
     def update_row(self, item):
         #find the item
+        self.log.debug("Updating row {0}".format(item))
         iter = self.__search(1, item['id'])
         if iter:
             for k,v in item.iteritems():
@@ -317,8 +312,7 @@ class Tree (Gtk.VBox, GObject.GObject):
                 # setup favicon
                 stock_id = self.store.get_value(iter, self.lmap.index('id')) 
                 path = os.path.join(self.favicon_path, stock_id)
-                stock = self.__setup_icons(path, stock_id)
-                if stock:
+                if self.__setup_icons(path, stock_id):
                     self.store.set_value(iter, self.lmap.index('stock-id'), stock_id)
                 self.__recount_category(self.store, piter)
     

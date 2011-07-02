@@ -117,7 +117,9 @@ class FeedGetter(threading.Thread):
             feed['name'] = f.feed.title.encode('utf-8')
         bozo_invalid = ['urlopen', 'Document is empty'] # Custom non-wanted bozos
         if hasattr(f.feed, 'link'):
-            self.__fetch_remote_favicon(f.feed.link, feed)
+            t = threading.Thread(target = self.__fetch_remote_favicon, 
+                            args=(self.favicon_path, f, feed, ))
+            t.start()
         if not hasattr(f, 'entries'):
             self.log.warning( "No entries found in feed {0}".format(feed['name']))
             self.result = feed
@@ -147,30 +149,12 @@ class FeedGetter(threading.Thread):
                 remote_images = self.__find_images_in_article(article['content'])
                 article['images'] = []
                 for i in remote_images:
-                    local_image = self.__fetch_remote_image(i, article['id'])
-                    if local_image:
-                        article['images'].append(local_image)
+                    t = threading.Thread(target = self.__fetch_remote_image, 
+                                    args=(self.images_path, i, article, ))
+                    t.start()
                 feed['articles'].append(article)
         self.log.debug("[Feed] {0} fetched".format(feed['name'].encode('utf-8')))
         self.result = feed
-    def __fetch_remote_image(self, src, article_id):
-        """Get a article image and write it to a local file."""
-        if not os.path.exists(self.images_path):
-            os.makedirs(self.images_path)
-        name = make_uuid(src, False) # images with the same url get the same name
-        image = os.path.join(self.images_path,name)
-        if os.path.exists(image): # we already have it, don't re-download
-            return {'name':name, 'url':src, 'article_id':article_id}
-        try:
-            web_file = urllib2.urlopen(src, timeout=10)
-            local_file = open(image, 'w')
-            local_file.write(web_file.read())
-            local_file.close()
-            web_file.close()
-            return {'name':name, 'url':src, 'article_id':article_id}
-        except Exception, e:
-            self.log.exception(e)
-            
     def __find_images_in_article(self, content):
         """Searches for img tags in article content."""
         images = []
@@ -179,42 +163,71 @@ class FeedGetter(threading.Thread):
         for img in m:
             images.append(img)
         return images
-    def __fetch_remote_favicon(self, url, feed):
+    def __fetch_remote_image(self, path, src, article):
+        """Get a article image and write it to a local file."""
+        time.sleep(30)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        name = make_uuid(src, False) # images with the same url get the same name
+        image = os.path.join(path,name)
+        if os.path.exists(image) and os.path.getsize(image) > 0: # we already have it, don't re-download
+            return {'name':name, 'url':src, 'article_id':article['id']}
+        try:
+            web_file = urllib2.urlopen(src, timeout=10)
+            local_file = open(image, 'w')
+            local_file.write(web_file.read())
+            local_file.close()
+            web_file.close()
+            article['mages'].append({'name':name, 'url':src, 'article_id':article['id']})
+        except Exception, e:
+            print(e)
+        #if the file is empty, remove it
+        if os.path.exists(image) and not os.path.getsize(image):
+            os.unlink(image)
+    def __fetch_remote_favicon(self, path, f, feed):
         """Find and download remote favicon for a feed."""
-        if not os.path.exists(self.favicon_path):
-            os.makedirs(self.favicon_path)
-        fav = os.path.join(self.favicon_path,feed['id'])
-        if os.path.exists(fav): # we already have it, don't re-download
+        time.sleep(30)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        fav = os.path.join(path,feed['id'])
+        if os.path.exists(fav) and os.path.getsize(fav) > 0: # we already have it, don't re-download
             self.log.debug("Favicon available for {0}".format(feed['name']))
             return True 
         #try The naufrago way
         try:
             split = feed['url'].split("/")
             src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
+            self.log.debug("Trying {0}".format(src))
             webfile = urllib2.urlopen(src, timeout=10)
             local_file = open(fav, 'w')
             local_file.write(webfile.read())
             local_file.close()
             webfile.close()
-            self.log.debug("Favicon found for {0}".format(feed['name']))
+            print("Favicon found for {0}".format(feed['name']))
         except Exception, e:
-            self.log.exception(e)
+            print(e)
+            #alternate method
+            url = f.feed['link']
             try:
                 # grab some html
-                tmp = html5lib.parse(urllib2.urlopen(url))
+                tmp = html5lib.parse(urllib2.urlopen(url).read())
                 rgxp = '''http.*?favicon\.ico'''
                 m = re.findall(rgxp, tmp.toxml(), re.I)
                 if m:
+                    print("Trying {0}".format(m[0]))
                     webfile = urllib2.urlopen(m[0], timeout=10)
                     local_file = open(fav, 'w')
                     local_file.write(webfile.read())
                     local_file.close()
                     webfile.close()
-                    self.log.debug("Favicon found for {0}".format(feed['name']))
+                    print("Favicon found for {0}".format(feed['name']))
                 else:
-                    self.log.debug("No favicon available for {0}".format(feed['name']))
+                    print("No favicon available for {0}".format(feed['name']))
             except Exception, e:
-                self.log.exception(e) 
+                print(e) 
+        #if the file is empty, remove it
+        if os.path.exists(fav) and not os.path.getsize(fav):
+            os.unlink(fav)
 
     def __check_feed_item(self, feed_item):
         """
@@ -642,7 +655,7 @@ class Engine (dbus.service.Object):
             try:
                 articles = feed.pop('articles') # we don't need them here
             except KeyError:
-                self.notice('warning', '[Feed] {0} has no new articles, or we may be offline'.format(feed['name']))
+                #~ self.notice('warning', '[Feed] {0} has no new articles, or we may be offline'.format(feed['name']))
                 articles = None
             except Exception, e:
                 self.log.warning("Error occured: {0}".format(e))
@@ -770,7 +783,7 @@ class Engine (dbus.service.Object):
             cursor.execute(q)
             self.conn.commit()
             cursor.close()
-            self.updated(feed)
+            #~ self.updated(feed)
             #~ self.notice('info', "[Feed] {0} edited".format(feed['name'].encode('utf-8')))
         except AssertionError:
             self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['name'].encode('utf-8')))
@@ -786,7 +799,15 @@ class Engine (dbus.service.Object):
     def __generator(self, flist, otf):
         self.log.debug("About to update {0} feed(s); otf: {1}".format(len(flist), otf))
         self.fcount = 0
-        self.updating(len(flist)) 
+        self.updating(len(flist))
+        #~ in_q = Queue(3)
+        #~ def yielder(q, c, a):
+            #~ while c > 0:
+                #~ thread = q.get(True)
+                #~ thread.join()
+                #~ a += 1
+                #~ c -= 1
+                #~ yield thread.get_result()
         for feed in flist:
             # let the UI know we're still busy
             name  = feed.get('name') or feed['url']
@@ -800,13 +821,15 @@ class Engine (dbus.service.Object):
                 self.log, 
                 )
             f.start()
+            #~ in_q.put(f)
+            # TODO: This is where you put it in the queue
             f.join()
             self.fcount += 1
-            yield f.get_result()
-            #~ yield feed
+            yield feed
+        #~ yielder(in_q, len(flist), self.fcount)
     def __loop_callback(self, feed):
         if feed:
-            self.log.debug("Branching on {0}".format(feed['name'].encode('utf-8')))
+            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['name'].encode('utf-8'), self.fcount))
             self.__add_items_for(feed)
             self.__update_ended(feed)
         else:
