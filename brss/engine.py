@@ -483,10 +483,12 @@ class Engine (dbus.service.Object):
     def toggle_starred(self, item):
         """Toggle the starred status of an article"""
         self.updated(self.__toggle_article('starred', item))
+        self.notice('info','Toggled Star on [Article] {0}'.format(item['title'].encode('utf-8')))
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
     def toggle_read(self, item):
         """Toggle the starred status of an article"""
         self.updated(self.__toggle_article('read', item))
+        self.notice('new','Toggled Read on [Article] {0}'.format(item['title'].encode('utf-8')))
 
     @dbus.service.method('com.itgears.BRss.Engine')
     def count_special(self):

@@ -155,6 +155,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.mal.add(self.msc)
         self.pack_start(self.fbox, False, False,0)
         self.pack_start(self.mal, True, True,0)
+        self.set_property("width-request", 600)
         menu = ItemListMenu(self)
         self.current_item = None
         GObject.type_register(ItemList)
@@ -339,8 +340,20 @@ class ItemList (Gtk.VBox, GObject.GObject):
     def mark_read(self, *args):
         """Mark the current article as read."""
         (model, iter) = self.listselect.get_selected()
-        path = model.get_path(iter)
-        self.emit('read-toggled', self.__get_current(model[path]))
+        if iter:
+            path = model.get_path(iter)
+            item = self.__get_current(model[path])
+            item['read'] = False # forcing it
+            self.emit('read-toggled', item)
+
+    def mark_starred(self, *args):
+        """Mark the current article as read."""
+        (model, iter) = self.listselect.get_selected()
+        if iter:
+            path = model.get_path(iter)
+            item = self.__get_current(model[path])
+            item['starred'] = False # forcing it
+            self.emit('star-toggled', item)
 
     def mark_all_read(self, *args):
         """Mark the current article as read."""

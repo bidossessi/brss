@@ -149,6 +149,9 @@ class Reader (Gtk.Window, GObject.GObject):
                     <menu action='EditMenu'>
                      <menuitem action='Edit'/>
                      <menuitem action='Find'/>
+                     <separator/>
+                     <menuitem action='Star'/>
+                     <separator/>
                      <menuitem action='Preferences'/>
                     </menu>
                     <menu action='NetworkMenu'>
@@ -175,6 +178,7 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Stop' action='StopUpdate'/>
                     <separator name='sep2'/>
                     <toolitem name='PreviousArticle' action='PreviousArticle'/>
+                    <toolitem name='Star' action='Star'/>
                     <toolitem name='NextArticle' action='NextArticle'/>
                     <separator name='sep3'/>
                     <toolitem name='FullScreen' action='FullScreen'/>
@@ -206,6 +210,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('Export feeds', "gtk-undo", 'Export feeds', None, 'Export a feedlist', self.__export_feeds),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edit the selected element'),
+                ('Star', "gtk-about", '_Star', '*', 'Star the current article', self.__star),
                 ('Preferences', "gtk-preferences", '_Preferences', '<control>P', 'Configure the engine', self.__edit_prefs),
                 ('Update', None, '_Update', '<control>U', 'Update the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
@@ -578,6 +583,8 @@ class Reader (Gtk.Window, GObject.GObject):
         a.set_sensitive(gmap.get(b))
     def __toggle_search(self, *args):
         self.emit('search-toggled')
+    def __star(self, *args):
+        self.ilist.mark_starred()
     def __update_started(self, *args):
         self.log.debug("Toggling update status to True")
         self.__toggle_in_update(True)
