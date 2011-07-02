@@ -24,6 +24,7 @@
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
+from gi.repository import Pango
 from functions import make_date
 
 class ItemList (Gtk.VBox, GObject.GObject):
@@ -52,6 +53,10 @@ class ItemList (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_LAST, 
             None,
             (GObject.TYPE_PYOBJECT,)),
+        "row-updated" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            (GObject.TYPE_PYOBJECT,)),
         "item-selected" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
@@ -74,12 +79,13 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.filterentry.set_property("secondary-icon-activatable", True)
         self.filterentry.set_property("secondary-icon-tooltip-text", "Search for...")
         self.filterentry.connect("icon-press", self.__icon_pressed)
-        self.filterentry.connect("activate", self.__search_request)
+        self.filterentry.connect("activate", self.__request_search)
         self.fbox = Gtk.HBox(spacing=3)
         self.fbox.pack_start(self.filterentry, True, True, 0)
-        store = Gtk.ListStore(str, bool, bool, int, str, str, int, str)
+        self.lmap = ['id','read','starred','date','title','url', 'weight', 'feed_id']
+        self.store = Gtk.ListStore(str, bool, bool, int, str, str, int, str)
         self.listview = Gtk.TreeView()
-        self.listview.set_model(store)
+        self.listview.set_model(self.store)
         self.listview.connect("row-activated", self.__row_activated)
         ## COLUMNS | store structure (id, read, starred, date, title, url, weight, feed_id)
         # read
@@ -132,6 +138,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         column.pack_start(cell, True)
         column.add_attribute(cell, "text", 4)
         column.add_attribute(cell, "weight", 6)
+        cell.set_property("ellipsize", Pango.EllipsizeMode.END)        
         column.set_sort_column_id(4)
         self.listview.append_column(column)
         # enable quick-searching
@@ -195,6 +202,26 @@ class ItemList (Gtk.VBox, GObject.GObject):
             self.emit('list-loaded')
         else:
             self.emit('no-data')
+    def insert_row(self, item):
+        self.log.debug("{0}: Adding row {1}".format(self, item['id']))
+        iter = self.store.append(None, self.__format_row(item))
+
+    def update_row(self, item):
+        #find the item
+        self.log.debug("{0}: Updating row {1}".format(self, item['id']))
+        iter = self.__search(0, item['id'])
+        if iter:
+            changed = {}
+            for k,v in item.iteritems():
+                try:
+                    o = self.store.get_value(iter, self.lmap.index(k))
+                    if k in ['id', 'feed_id'] or o != v:
+                        self.store.set_value(iter, self.lmap.index(k), v)
+                        changed[k] = v
+                except Exception, e:
+                    self.log.exception(e)
+                    pass # we don't really care about this one 
+        self.emit('row-updated', changed)
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
@@ -229,7 +256,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
             if event.button == 3 or event.button == 1:
                 self.__request_search(entry)
     
-    def __search_request(self, entry, *args):
+    def __request_search(self, entry, *args):
         self.emit('search-requested', entry.get_text())
         self.__clear_filter()
         
@@ -250,13 +277,24 @@ class ItemList (Gtk.VBox, GObject.GObject):
             if int(s) > 0:
                 niter = model.get_iter_from_string(str(int(s)-1))
                 self.listselect.select_iter(niter)
-                
-    
+
+    def __search(self, col, value):
+        """
+        Returns a iter for the value we are looking for.
+        """
+        model = self.store
+        iter = model.get_iter_first()
+        while iter:
+            v = model.get_value(iter, col)
+            if value == v:
+                return iter
+            iter = model.iter_next(iter)
     
     def __get_current(self, row=False):
         bmap = {False:"0", True:"1"}
         if row:
-            item = {
+            self.current_item = {
+                'type':'article',
                 'id': row[0],
                 'read': row[1],
                 'starred': row[2],
@@ -264,12 +302,12 @@ class ItemList (Gtk.VBox, GObject.GObject):
                 'url': row[5],
                 'feed_id': row[7],
             }
-            self.current_item = item
-            return item
+            return self.current_item
         else:
             (model, iter) = self.listselect.get_selected()
             if iter:
-                item = {
+                self.current_item = {
+                    'type':'article',
                     'id': model.get_value(iter, 0),
                     'read': bmap.get(model.get_value(iter, 1)),
                     'starred': bmap.get(model.get_value(iter, 2)),
@@ -277,20 +315,19 @@ class ItemList (Gtk.VBox, GObject.GObject):
                     'url': model.get_value(iter, 5),
                     'feed_id': model.get_value(iter, 7),
                 }
-                self.current_item = item
-                return item
+                return self.current_item
     
     def __toggle_star(self, cell, path, model):
         self.__lock__ = True
-        bmap = {True:False, False:True}
-        model[path][2] = bmap.get(model[path][2])
+        #~ bmap = {True:False, False:True}
+        #~ model[path][2] = bmap.get(model[path][2])#FIXME: not my job!
         self.emit('star-toggled', self.__get_current(model[path]))
     
     def __toggle_read(self, cell, path, model):
         self.__lock__ = True
-        bmap = {True:False, False:True}
-        model[path][1] = bmap.get(model[path][1])
-        model[path][6] = self.__get_weight(model[path][1])
+        #~ bmap = {True:False, False:True}
+        #~ model[path][1] = bmap.get(model[path][1])#FIXME: not my job!
+        #~ model[path][6] = self.__get_weight(model[path][1])
         self.emit('read-toggled', self.__get_current(model[path]))
     
     def __skip_toggles(self, selection, *args):
@@ -303,10 +340,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         """Mark the current article as read."""
         (model, iter) = self.listselect.get_selected()
         path = model.get_path(iter)
-        if model[path][1] == False:
-            model[path][1] = True
-            model[path][6] = self.__get_weight(model[path][1])
-            self.emit('read-toggled', self.__get_current(model[path]))
+        self.emit('read-toggled', self.__get_current(model[path]))
 
     def mark_all_read(self, *args):
         """Mark the current article as read."""
@@ -323,19 +357,19 @@ class ItemList (Gtk.VBox, GObject.GObject):
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)    
     # convenience
-    def do_item_selected(self, item):
-        self.log.debug('{0}: Item selected {1}'.format(self, item))
+    #~ def do_item_selected(self, item):
+        #~ self.log.debug('{0}: Item selected {1}'.format(self, item))
     def do_star_toggled(self, item):
-        self.log.debug('{0}: Star this {1}'.format(self, item))
+        self.log.debug('{0}: Star this {1}'.format(self, item['id']))
     def do_read_toggled(self, item):
-        self.log.debug('{0}: Toggle this {1}'.format(self, item))
-    def do_search_requested(self, item):
-        self.log.debug('{0}: Search for {1}'.format(self, item))
-    def do_no_data(self):
-        self.log.debug('{0}: No data found'.format(self))
-    def do_list_loaded(self):
-        self.log.debug("{0}: selecting first item".format(self))
-        self.listselect.select_path((0,))
+        self.log.debug('{0}: Toggle this {1}'.format(self, item['id']))
+    #~ def do_search_requested(self, item):
+        #~ self.log.debug('{0}: Search for {1}'.format(self, item))
+    #~ def do_no_data(self):
+        #~ self.log.debug('{0}: No data found'.format(self))
+    #~ def do_list_loaded(self):
+        #~ self.log.debug("{0}: selecting first item".format(self))
+        #~ self.listselect.select_path((0,))
 
 class ItemListMenu(Gtk.Menu):
     """

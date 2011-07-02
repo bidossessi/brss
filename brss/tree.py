@@ -24,7 +24,7 @@
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
-import pango
+from gi.repository import Pango
 import os
 from functions import make_path
 
@@ -210,7 +210,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         else:
            cell.set_property("text",name)
         cell.set_property("weight", self.__get_weight(int(count)))
-        cell.set_property("ellipsize", pango.ELLIPSIZE_END)
+        cell.set_property("ellipsize", Pango.EllipsizeMode.END)
     
     def __format_row(self, a):
         gmap = {'feed':'missing', 'category':'gtk-directory'}
@@ -278,20 +278,16 @@ class Tree (Gtk.VBox, GObject.GObject):
         """
         if not model:
             model = self.menuview.get_model()
-        gmap = {0:'type', 1:'id', 2:'name', 3:'count'}
-        #~ print "seaching for {0} == {1}".format(gmap.get(col), value)
         iter = model.get_iter_first()
         while iter:
             v = model.get_value(iter, col)
             if value == v:
-                #~ print( "match found: {0} => {1}: {2}".format(gmap.get(col), v, model.get_value(iter, 2)))
                 return iter
             elif model.iter_has_child(iter):
                 citer = model.iter_children(iter)
                 while citer:
                     v = model.get_value(citer, col)
                     if value == v:
-                        #~ print( "match found: {0} => {1}: {2}".format(gmap.get(col), v, model.get_value(citer, 2)))
                         return citer
                     citer = model.iter_next(citer)
             iter = model.iter_next(iter)
@@ -334,11 +330,15 @@ class Tree (Gtk.VBox, GObject.GObject):
             uiter = self.__search(0, 'unread', self.sstore)
             self.__update_count(self.sstore, uiter, 3, c, ['replace'])                
     def update_starred(self, ilist, item):
+        if 'starred' not in item.keys():
+            return
         # if item['starred'] is 0, we go minus
         iter = self.__search(0, 'starred', self.sstore)
         self.__update_count(self.sstore, iter, 3, item['starred'], ['toggle'])
 
     def update_unread(self, ilist, item, col="read"):
+        if col not in item.keys():
+            return
         flags = ['toggle', 'invert']
         # if item['read'] is 0, we go plus
         # try to update the originating feed

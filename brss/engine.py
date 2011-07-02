@@ -165,7 +165,7 @@ class FeedGetter(threading.Thread):
         return images
     def __fetch_remote_image(self, path, src, article):
         """Get a article image and write it to a local file."""
-        time.sleep(30)
+        time.sleep(30)##debug##
         if not os.path.exists(path):
             os.makedirs(path)
         name = make_uuid(src, False) # images with the same url get the same name
@@ -186,7 +186,7 @@ class FeedGetter(threading.Thread):
             os.unlink(image)
     def __fetch_remote_favicon(self, path, f, feed):
         """Find and download remote favicon for a feed."""
-        time.sleep(30)
+        time.sleep(30)##debug##
         if not os.path.exists(path):
             os.makedirs(path)
         fav = os.path.join(path,feed['id'])
@@ -482,11 +482,11 @@ class Engine (dbus.service.Object):
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
     def toggle_starred(self, item):
         """Toggle the starred status of an article"""
-        self.__toggle_article('starred', item)
+        self.updated(self.__toggle_article('starred', item))
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
     def toggle_read(self, item):
         """Toggle the starred status of an article"""
-        self.__toggle_article('read', item)
+        self.updated(self.__toggle_article('read', item))
 
     @dbus.service.method('com.itgears.BRss.Engine')
     def count_special(self):
@@ -515,7 +515,10 @@ class Engine (dbus.service.Object):
 
     @dbus.service.signal('com.itgears.BRss.Engine', signature='a{sv}')
     def updated(self, item):
-        self.log.debug("updated: {0}".format(item['name']))
+        name = item.get('name') or item.get('id')
+        self.log.debug("updated: [{0}] {1}".format(
+            item['type'].capitalize(), 
+            name.encode('utf-8')))
 
     @dbus.service.signal('com.itgears.BRss.Engine')
     def complete(self, c):
@@ -978,13 +981,16 @@ class Engine (dbus.service.Object):
         """Toggles the state of an article column.
         Returns the current state
         """
+        bmap = {True:False, False:True}
+        item[col] = bmap.get(item[col])
         self.log.debug("Toggling {0}: {1} on {2}".format(col, item[col], item['id']))
-        q = 'UPDATE articles set {0} = {1} WHERE id = "{2}"'.format(col, item[col], item['id'])
+        q = 'UPDATE articles set {0} = {1} WHERE id = "{2}"'.format(col, int(item[col]), item['id'])
+        print q
         cursor = self.conn.cursor()
         cursor.execute(q)
         self.conn.commit()
         cursor.close()
-        return item[col]
+        return item
     def __count_articles(self, item=None):
         if item and item.has_key('type'):
             if item['type'] == 'category':

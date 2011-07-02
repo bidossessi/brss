@@ -291,8 +291,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect('no-data', self.__reset_title)
         self.ilist.connect('star-toggled', self.__toggle_starred)
         self.ilist.connect('read-toggled', self.__toggle_read)
-        self.ilist.connect_after('star-toggled', self.tree.update_starred)
-        self.ilist.connect_after('read-toggled', self.tree.update_unread)
+        self.ilist.connect_after('row-updated', self.tree.update_starred)
+        self.ilist.connect_after('row-updated', self.tree.update_unread)
         self.ilist.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('search-requested', self.__search_articles)
         self.ilist.connect('search-requested', self.tree.deselect)
@@ -303,8 +303,8 @@ class Reader (Gtk.Window, GObject.GObject):
 
     def __connect_engine_signals(self):
         self.engine.connect_to_signal('notice', self.status.message)
-        self.engine.connect_to_signal('added', self.tree.insert_row)
-        self.engine.connect_to_signal('updated', self.tree.update_row)
+        self.engine.connect_to_signal('added', self.__handle_added)
+        self.engine.connect_to_signal('updated', self.__handle_updated)
         self.engine.connect_to_signal('updating', self.__update_started)
         self.engine.connect_to_signal('complete', self.__update_done)
         self.engine.connect_to_signal('complete', self.tree.select_current)
@@ -534,10 +534,18 @@ class Reader (Gtk.Window, GObject.GObject):
         self.get_article(item, 
                 reply_handler=self.view.show_article,
                 error_handler=self.__to_log)
-    def __handle_new(self, item):
-        self.log.debug("New item: {0}".format(item))
+    def __handle_added(self, item):
+        self.log.debug("{0}: Added item: {1}".format(self, item['id']))
         if item['type'] in ['feed', 'category']:
-            self.tree.insert_row(item)
+            return self.tree.insert_row(item)
+        if item['type'] == 'article':
+            return self.ilist.insert_row(item)
+    def __handle_updated(self, item):
+        self.log.debug("{0}: Updated item: {1}".format(self, item['id']))
+        if item['type'] in ['feed', 'category']:
+            return self.tree.update_row(item)
+        if item['type'] == 'article':
+            return self.ilist.update_row(item)
     def __handle_dcall(self, caller, name, item):
         if name in ['Update', 'Update all']:
             self.log.debug("updating {0}".format(item))
