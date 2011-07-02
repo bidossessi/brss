@@ -191,7 +191,7 @@ class FeedGetter(threading.Thread):
         try:
             split = feed['url'].split("/")
             src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
-            webfile = urllib2.urlopen(src, timeout=3)
+            webfile = urllib2.urlopen(src, timeout=10)
             local_file = open(fav, 'w')
             local_file.write(webfile.read())
             local_file.close()
@@ -205,7 +205,7 @@ class FeedGetter(threading.Thread):
                 rgxp = '''http.*?favicon\.ico'''
                 m = re.findall(rgxp, tmp.toxml(), re.I)
                 if m:
-                    webfile = urllib2.urlopen(m[0])
+                    webfile = urllib2.urlopen(m[0], timeout=10)
                     local_file = open(fav, 'w')
                     local_file.write(webfile.read())
                     local_file.close()
@@ -750,7 +750,7 @@ class Engine (dbus.service.Object):
             cursor.close()
             category['count'] = self.__count_unread_articles(category)
             self.updated(category)
-            self.notice('info', "[Category] {0} edited".format(category['name'].encode('utf-8')))
+            #~ self.notice('info', "[Category] {0} edited".format(category['name'].encode('utf-8')))
         except AssertionError:
             self.warning("Category {0} doesn't exist, or is a duplicate! Aborting".format(category['name'].encode('utf-8')))
     def __edit_feed(self, feed):
@@ -771,7 +771,7 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
             self.updated(feed)
-            self.notice('info', "[Feed] {0} edited".format(feed['name'].encode('utf-8')))
+            #~ self.notice('info', "[Feed] {0} edited".format(feed['name'].encode('utf-8')))
         except AssertionError:
             self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['name'].encode('utf-8')))
     def __update_all(self):
@@ -786,10 +786,11 @@ class Engine (dbus.service.Object):
     def __generator(self, flist, otf):
         self.log.debug("About to update {0} feed(s); otf: {1}".format(len(flist), otf))
         self.fcount = 0
+        self.updating(len(flist)) 
         for feed in flist:
             # let the UI know we're still busy
-            self.updating(len(flist)) 
-            self.log.debug("Fetching feed {0} - count {1}".format(feed['url'], self.fcount))
+            name  = feed.get('name') or feed['url']
+            self.notice("wait", "Updating [Feed] {0} ({1})".format(name.encode('utf-8'), self.fcount))
             f = FeedGetter(
                 feed, 
                 self.base_path, 
@@ -931,13 +932,13 @@ class Engine (dbus.service.Object):
 
     def __update_ended(self, feed):
         if feed:
-            a = self.__count_articles(feed)
-            u = self.__count_unread_articles(feed)
+            #~ a = self.__count_articles(feed)
+            #~ u = self.__count_unread_articles(feed)
             self.updated(feed)
-            self.notice('wait', "{0} updated | {1} articles | {2} unread".format(
-                        feed['name'], 
-                        a, 
-                        u))
+            #~ self.notice('wait', "{0} updated | {1} articles | {2} unread".format(
+                        #~ feed['name'], 
+                        #~ a, 
+                        #~ u))
         
     def __timed_update(self, *args):
         self.log.debug("About to auto-update")

@@ -590,7 +590,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 self.emit('no-engine')
     
     def __to_browser(self, caller, link):
-        self.log.debug("Trying to open link '{0}' in browser".format(item))
+        self.log.debug("Trying to open link '{0}' in browser".format(link))
         orig_link = self.view.link_button.get_uri()
         self.view.link_button.set_uri(link)
         self.view.link_button.activate()
