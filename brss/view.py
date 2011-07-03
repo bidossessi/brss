@@ -60,11 +60,18 @@ class View (Gtk.VBox, GObject.GObject):
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         # top navi
+        self.set_no_show_all(True)
         tbox = Gtk.HBox(spacing=3)
         # navigation buttons
         self.link_button = Gtk.LinkButton('', label='Article Title')
         self.link_button.set_relief(Gtk.ReliefStyle.NONE)
         tbox.pack_start(self.link_button, True, True,0)
+        self.file_img = Gtk.Image().new_from_stock('gtk-file', Gtk.IconSize.BUTTON)
+        tbox.pack_start(self.file_img, False, False,0)
+        self.star_img = Gtk.Image().new_from_stock('gtk-about', Gtk.IconSize.BUTTON)
+        tbox.pack_start(self.star_img, False, False,0)
+        self.feed_img = Gtk.Image().new_from_stock('missing', Gtk.IconSize.BUTTON)
+        tbox.pack_start(self.feed_img, False, False,0)
         # webkit view
         self.feedview = WebKit.WebView()
         self.feedview.set_full_content_zoom(True)
@@ -72,27 +79,43 @@ class View (Gtk.VBox, GObject.GObject):
         self.feedview.connect("hovering-over-link", self.__hover_webview)
         self.link_button.connect("enter-notify-event", self.__hover_link, "in")
         self.link_button.connect("leave-notify-event", self.__hover_link)
-
         # containers
         tal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
+        tal.show()
         tal.add(tbox)
+        tbox.show()
         msc = Gtk.ScrolledWindow()
+        msc.show()
         msc.set_shadow_type(Gtk.ShadowType.IN)
         msc.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         msc.add(self.feedview)
         mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
+        mal.show()
         mal.add(msc)
         self.pack_start(tal, False, False,0)
         self.pack_start(mal, True, True,0)
         GObject.type_register(View)
         self.valid_links = ['file:']
+        self.show()
+        self.link_button.show()
+        self.feedview.show()
+        self.feed_img.show()
+        self.file_img.show()
+        self.__art_id = None
     def __repr__(self):
         return "View"
 
     def show_article(self, art_tuple):
-        self.show()
         art, links = art_tuple
         self.log.debug("{0}: loading article {1}".format(self, art['id']))
+        self.__art_id = art['id']
+        try:
+            self.log.debug('{0}: Showing feed icon {1}'.format(self, art['feed_id']))
+            self.feed_img.set_from_stock(art['feed_id'], Gtk.IconSize.BUTTON)
+        except:
+            self.log.debug('{0}: Showing default feed icon'.format(self))
+            self.feed_img.set_from_stock('missing', Gtk.IconSize.BUTTON)        
+        self.star_this(art)
         self.valid_links = links
         self.valid_links.append("file:")
         self.link_button.set_label("[{0}] - {1}".format(
@@ -147,6 +170,15 @@ class View (Gtk.VBox, GObject.GObject):
             to launch the engine at startup.</em></p>
             </html>"""
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")
+    def star_this(self, article):
+        if article['id'] == self.__art_id:
+            # starred articles feedback
+            if article['starred'] == True:
+                self.file_img.hide()
+                self.star_img.show()
+            else:
+                self.file_img.show()
+                self.star_img.hide()
     def do_link_hovered(self, url):
         self.log.debug("{0}: Hovered on {1}".format(self, url))
     def do_link_clicked(self, url):

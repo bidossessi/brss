@@ -146,7 +146,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             name1 = model.get_value(iter1, 2).lower()
             name2 = model.get_value(iter2, 2).lower()
         except Exception, e:
-            self.log.exception(e)
+            #~ self.log.exception(e)
             name1 = model.get_value(iter1, 2)
             name2 = model.get_value(iter2, 2)
         #3. put general on top
@@ -248,29 +248,51 @@ class Tree (Gtk.VBox, GObject.GObject):
                 self.sselect.unselect_iter(iter)
                 self.sselect.select_iter(iter)
 
-    #~ def next_item(self, *args):
-        #~ self.log.debug('Selecting next feed')
-        #~ model, iter = self.menuselect.get_selected()
-        #~ if model.get_value(iter, 0) == "category":
-            #~ #select the first child
-            #~ iter = model.iter_children(iter)
-        #~ if iter:
-            #~ niter = model.iter_next(iter)
-            #~ try: self.menuselect.select_iter(niter)
-            #~ except Exception, e:
-                #~ self.log.exception(e) 
+    def next_item(self, *args):
+        self.log.debug('Selecting next feed')
+        model, iter = self.menuselect.get_selected()
+        if iter:
+            if model.get_value(iter, 0) == "category":
+                if model.iter_has_child(iter):
+                    #select the first child
+                    niter = model.iter_children(iter)
+                    self.menuselect.select_iter(niter)
+                    return
+                else:
+                    #select the first category
+                    niter = model.iter_next(iter)
+                    self.menuselect.select_iter(niter)
+                    return self.next_item()
+            else:
+                #select the first feed
+                niter = self.store.iter_next(iter)
+                if niter:
+                    self.menuselect.select_iter(niter)
+                else:
+                    #select the first category
+                    iter = self.store.iter_parent(iter)
+                    niter = self.store.iter_next(iter)
+                    if niter:
+                        self.menuselect.select_iter(niter)
+                        return self.next_item()
+        else:
+            #select the first category
+            niter = self.store.get_iter_first()
+            self.menuselect.select_iter(niter)
+            self.next_item()
+            
     #~ 
-    #~ def previous_item(self, *args): #FIXME: doesn't work
-        #~ self.log.debug('Selecting previous feed')
-        #~ model, iter = self.menuselect.get_selected()
-        #~ if model.get_value(iter, 0)=="category":
-            #~ #select the first child
-            #~ iter = model.iter_children(iter)
-        #~ if iter:
-            #~ s = model.get_string_from_iter(iter)
-            #~ if int(s) > 0:
-                #~ niter = model.get_iter_from_string(str(int(s)-1))
-                #~ self.menuselect.select_iter(niter)
+    def previous_item(self, *args): #FIXME: doesn't work
+        self.log.debug('Selecting previous feed')
+        model, iter = self.menuselect.get_selected()
+        if model.get_value(iter, 0)=="category":
+            #select the first child
+            iter = model.iter_children(iter)
+        if iter:
+            s = model.get_string_from_iter(iter)
+            if int(s) > 0:
+                niter = model.get_iter_from_string(str(int(s)-1))
+                self.menuselect.select_iter(niter)
         
     def __search(self, col, value, model=None):
         """

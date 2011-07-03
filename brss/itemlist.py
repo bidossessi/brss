@@ -219,6 +219,8 @@ class ItemList (Gtk.VBox, GObject.GObject):
                     if k in ['id', 'feed_id'] or o != v:
                         self.store.set_value(iter, self.lmap.index(k), v)
                         changed[k] = v
+                        if k == 'read':
+                            self.store.set_value(iter, self.lmap.index('weight'), self.__get_weight(v))
                 except Exception, e:
                     self.log.exception(e)
                     pass # we don't really care about this one 
@@ -352,7 +354,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
         if iter:
             path = model.get_path(iter)
             item = self.__get_current(model[path])
-            item['starred'] = False # forcing it
+            #~ item['starred'] = False # forcing it
             self.emit('star-toggled', item)
 
     def mark_all_read(self, *args):
@@ -380,9 +382,10 @@ class ItemList (Gtk.VBox, GObject.GObject):
         #~ self.log.debug('{0}: Search for {1}'.format(self, item))
     #~ def do_no_data(self):
         #~ self.log.debug('{0}: No data found'.format(self))
-    #~ def do_list_loaded(self):
+    def do_list_loaded(self):
         #~ self.log.debug("{0}: selecting first item".format(self))
-        #~ self.listselect.select_path((0,))
+        self.listselect.select_path((0,))
+        self.listview.grab_focus()
 
 class ItemListMenu(Gtk.Menu):
     """

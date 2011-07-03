@@ -161,6 +161,8 @@ class Reader (Gtk.Window, GObject.GObject):
                     <menu action='ViewMenu'>
                      <menuitem action='NextArticle'/>
                      <menuitem action='PreviousArticle'/>
+                     <menuitem action='NextFeed'/>
+                     <menuitem action='PreviousFeed'/>
                     <separator />
                      <menuitem action='FullScreen'/>
                     </menu>
@@ -177,9 +179,11 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Update all' action='Update all'/>
                     <toolitem name='Stop' action='StopUpdate'/>
                     <separator name='sep2'/>
+                    <toolitem name='PreviousFeed' action='PreviousFeed'/>
                     <toolitem name='PreviousArticle' action='PreviousArticle'/>
                     <toolitem name='Star' action='Star'/>
                     <toolitem name='NextArticle' action='NextArticle'/>
+                    <toolitem name='NextFeed' action='NextFeed'/>
                     <separator name='sep3'/>
                     <toolitem name='FullScreen' action='FullScreen'/>
                     <toolitem name='Find' action='Find'/>
@@ -203,21 +207,21 @@ class Reader (Gtk.Window, GObject.GObject):
         self.mag.add_actions(mactions)
         self.ag = Gtk.ActionGroup('WindowActions')
         actions = [
-                ('New feed', 'feed', '_New feed', '<control>N', 'Add a feed', self.__add_feed),
-                ('New category', "gtk-directory", 'New _category', '<alt>C', 'Add a category', self.__add_category),
+                ('New feed', 'feed', '_New feed', '<control><alt>n', 'Add a feed', self.__add_feed),
+                ('New category', "gtk-directory", 'New _category', '<control><alt>c', 'Add a category', self.__add_category),
                 ('Delete', "gtk-clear", 'Delete', 'Delete', 'Delets a feed or a category', self.__delete_item),
                 ('Import feeds', "gtk-redo", 'Import feeds', None, 'Import a feedlist', self.__import_feeds),
                 ('Export feeds', "gtk-undo", 'Export feeds', None, 'Export a feedlist', self.__export_feeds),
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edit the selected element'),
-                ('Star', "gtk-about", '_Star', '*', 'Star the current article', self.__star),
+                ('Star', "gtk-about", '_Star', 'x', 'Star the current article', self.__star),
                 ('Preferences', "gtk-preferences", '_Preferences', '<control>P', 'Configure the engine', self.__edit_prefs),
                 ('Update', None, '_Update', '<control>U', 'Update the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
-                ('PreviousArticle', "gtk-go-back", 'Previous Article', '<control>b', 'Go to the previous article', self.__previous_article),
-                ('NextArticle', "gtk-go-forward", 'Next Article', '<control>n', 'Go to the next article', self.__next_article),
-                ('PreviousFeed', "gtk-goto-first", 'Previous Feed', '<control><shift>b', 'Go to the previous news feed', self.__previous_feed),
-                ('NextFeed', "gtk-goto-last", 'Next Feed', '<control><shift>n', 'Go to the next news feed', self.__next_feed),
+                ('PreviousArticle', "gtk-go-back", 'Previous Article', 'b', 'Go to the previous article', self.__previous_article),
+                ('NextArticle', "gtk-go-forward", 'Next Article', 'n', 'Go to the next article', self.__next_article),
+                ('PreviousFeed', "gtk-goto-first", 'Previous Feed', '<shift>b', 'Go to the previous news feed', self.__previous_feed),
+                ('NextFeed', "gtk-goto-last", 'Next Feed', '<shift>n', 'Go to the next news feed', self.__next_feed),
                 ('StopUpdate', "gtk-stop", 'Stop', None, 'StopUpdate', self.__stop_updates),
             ]
         tactions = [
@@ -282,8 +286,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.log.debug("{0}: Connecting all signals".format(self))
         self.connect('next-article', self.ilist.next_item)
         self.connect('previous-article', self.ilist.previous_item)
-        #~ self.connect('next-feed', self.tree.next_item)#TODO: implement
-        #~ self.connect('previous-feed', self.tree.previous_item)#TODO: implement
+        self.connect('next-feed', self.tree.next_item)#TODO: implement
+        self.connect('previous-feed', self.tree.previous_item)#TODO: implement
         self.connect('search-toggled', self.ilist.toggle_search)
         self.connect_after('no-engine', self.__no_engine)
         self.connect_after('no-engine', self.view.no_engine)
@@ -392,7 +396,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
     def __load_articles(self, tree, item):
-        self.log.debug("{0}: Loading articles for feed {1}".format(self, item['name'].encode('utf_8')))
+        self.log.debug("{0}: Loading articles for feed {1}".format(self, item['name']))
         self.get_articles_for(item, 
                 reply_handler=self.ilist.load_list,
                 error_handler=self.__to_log)
@@ -550,6 +554,7 @@ class Reader (Gtk.Window, GObject.GObject):
         if item['type'] in ['feed', 'category']:
             return self.tree.update_row(item)
         if item['type'] == 'article':
+            self.view.star_this(item)
             return self.ilist.update_row(item)
     def __handle_dcall(self, caller, name, item):
         if name in ['Update', 'Update all']:

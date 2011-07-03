@@ -358,14 +358,14 @@ class Engine (dbus.service.Object):
             x = ''
         if item and item.has_key('type'):
             if item['type'] == 'feed':
-                query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date DESC'.format(item['id'], x)
+                query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date ASC'.format(item['id'], x)
                 return self.__make_articles_list(query)
             if item['type'] == 'category':
                 # recurse
                 feeds = self.__get_feeds_for(item)
                 articles = []
                 for f in feeds:
-                    query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date DESC'.format(f['id'], x)
+                    query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date ASC'.format(f['id'], x)
                     articles.extend(self.__make_articles_list(query))
                 return articles
             # special cases
@@ -483,12 +483,10 @@ class Engine (dbus.service.Object):
     def toggle_starred(self, item):
         """Toggle the starred status of an article"""
         self.updated(self.__toggle_article('starred', item))
-        self.notice('info','Toggled Star on [Article] {0}'.format(item['title'].encode('utf-8')))
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
     def toggle_read(self, item):
         """Toggle the starred status of an article"""
         self.updated(self.__toggle_article('read', item))
-        self.notice('new','Toggled Read on [Article] {0}'.format(item['title'].encode('utf-8')))
 
     @dbus.service.method('com.itgears.BRss.Engine')
     def count_special(self):
@@ -737,7 +735,7 @@ class Engine (dbus.service.Object):
         cursor.close()
         return feeds
     def __get_article(self, id):
-        q = 'SELECT id,title,date,url,content FROM articles WHERE id = "{0}"'.format(id)
+        q = 'SELECT id,title,date,url,content, starred,feed_id FROM articles WHERE id = "{0}"'.format(id)
         # run query
         cursor = self.conn.cursor()
         cursor.execute(q)
@@ -749,6 +747,8 @@ class Engine (dbus.service.Object):
                     'date':str(r[2]),
                     'link':r[3], 
                     'content':r[4], 
+                    'starred':r[5], 
+                    'feed_id':r[6], 
                 }
     
     ## Update (CR*U*D)
@@ -1043,12 +1043,12 @@ class Engine (dbus.service.Object):
         return c[0]
     def __get_unread_articles(self):
         articles = []
-        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE read = 0 ORDER BY date DESC'
+        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE read = 0 ORDER BY date ASC'
         # run query
         return self.__make_articles_list(query)
     def __get_starred_articles(self):
         articles = []
-        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE starred = 1 ORDER BY date DESC'
+        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE starred = 1 ORDER BY date ASC'
         # run query
         return self.__make_articles_list(query)
     def __swap_image_tags(self, article):
