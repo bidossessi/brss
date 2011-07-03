@@ -256,24 +256,24 @@ class Tree (Gtk.VBox, GObject.GObject):
                 if model.iter_has_child(iter):
                     #select the first child
                     niter = model.iter_children(iter)
-                    self.menuselect.select_iter(niter)
+                    self.__select_iter(self.menuview, niter)
                     return
                 else:
                     #select the first category
                     niter = model.iter_next(iter)
-                    self.menuselect.select_iter(niter)
+                    self.__select_iter(self.menuview, niter)
                     return self.next_item()
             else:
                 #select the first feed
                 niter = self.store.iter_next(iter)
                 if niter:
-                    self.menuselect.select_iter(niter)
+                    self.__select_iter(self.menuview, niter)
                 else:
                     #select the first category
                     iter = self.store.iter_parent(iter)
                     niter = self.store.iter_next(iter)
                     if niter:
-                        self.menuselect.select_iter(niter)
+                        self.__select_iter(self.menuview, niter)
                         return self.next_item()
         else:
             #select the first category
@@ -281,7 +281,13 @@ class Tree (Gtk.VBox, GObject.GObject):
             self.menuselect.select_iter(niter)
             self.next_item()
             
-    #~ 
+    def __select_iter(self, treeview, iter):
+        model = treeview.get_model()
+        sel = treeview.get_selection()
+        path = model.get_path(iter)
+        sel.select_path(path)
+        treeview.scroll_to_cell(path, use_align=True)
+        
     def previous_item(self, *args): #FIXME: doesn't work
         self.log.debug('Selecting previous feed')
         model, iter = self.menuselect.get_selected()

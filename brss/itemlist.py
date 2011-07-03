@@ -269,7 +269,7 @@ class ItemList (Gtk.VBox, GObject.GObject):
     def next_item(self, *args):
         model, iter = self.listselect.get_selected()
         niter = model.iter_next(iter)
-        try: self.listselect.select_iter(niter)
+        try: self.__select_iter(self.listview, niter)
         except Exception, e:
             self.log.exception(e) 
     
@@ -279,7 +279,14 @@ class ItemList (Gtk.VBox, GObject.GObject):
             s = model.get_string_from_iter(iter)
             if int(s) > 0:
                 niter = model.get_iter_from_string(str(int(s)-1))
-                self.listselect.select_iter(niter)
+                self.__select_iter(self.listview, niter)
+
+    def __select_iter(self, treeview, iter):
+        model = treeview.get_model()
+        sel = treeview.get_selection()
+        path = model.get_path(iter)
+        sel.select_path(path)
+        treeview.scroll_to_cell(path, use_align=True)
 
     def __search(self, col, value):
         """
