@@ -116,10 +116,9 @@ class FeedGetter(threading.Thread):
         if(hasattr(f.feed,'title')):
             feed['name'] = f.feed.title.encode('utf-8')
         bozo_invalid = ['urlopen', 'Document is empty'] # Custom non-wanted bozos
-        if hasattr(f.feed, 'link'):
-            t = threading.Thread(target = self.__fetch_remote_favicon, 
-                            args=(self.favicon_path, f, feed, ))
-            t.start()
+        t = threading.Thread(target = self.__fetch_remote_favicon, 
+                            args=(self.favicon_path, f.feed, feed, ))
+        t.start()
         if not hasattr(f, 'entries'):
             self.log.warning( "No entries found in feed {0}".format(feed['name']))
             self.result = feed
@@ -149,9 +148,7 @@ class FeedGetter(threading.Thread):
                 remote_images = self.__find_images_in_article(article['content'])
                 article['images'] = []
                 for i in remote_images:
-                    t = threading.Thread(target = self.__fetch_remote_image, 
-                                    args=(self.images_path, i, article, ))
-                    t.start()
+                    self.__fetch_remote_image(self.images_path, i, article)
                 feed['articles'].append(article)
         self.log.debug("[Feed] {0} fetched".format(feed['name'].encode('utf-8')))
         self.result = feed
@@ -178,13 +175,13 @@ class FeedGetter(threading.Thread):
             local_file.write(web_file.read())
             local_file.close()
             web_file.close()
-            article['mages'].append({'name':name, 'url':src, 'article_id':article['id']})
+            article['images'].append({'name':name, 'url':src, 'article_id':article['id']})
         except Exception, e:
             print(e)
         #if the file is empty, remove it
         if os.path.exists(image) and not os.path.getsize(image):
             os.unlink(image)
-    def __fetch_remote_favicon(self, path, f, feed):
+    def __fetch_remote_favicon(self, path, parsed_feed, feed):
         """Find and download remote favicon for a feed."""
         time.sleep(30)##debug##
         if not os.path.exists(path):
@@ -207,24 +204,25 @@ class FeedGetter(threading.Thread):
         except Exception, e:
             print(e)
             #alternate method
-            url = f.feed['link']
-            try:
-                # grab some html
-                tmp = html5lib.parse(urllib2.urlopen(url).read())
-                rgxp = '''http.*?favicon\.ico'''
-                m = re.findall(rgxp, tmp.toxml(), re.I)
-                if m:
-                    print("Trying {0}".format(m[0]))
-                    webfile = urllib2.urlopen(m[0], timeout=10)
-                    local_file = open(fav, 'w')
-                    local_file.write(webfile.read())
-                    local_file.close()
-                    webfile.close()
-                    print("Favicon found for {0}".format(feed['name']))
-                else:
-                    print("No favicon available for {0}".format(feed['name']))
-            except Exception, e:
-                print(e) 
+            if parsed_feed.has_key('link'):        
+                url = parsed_feed['link']
+                try:
+                    # grab some html
+                    tmp = html5lib.parse(urllib2.urlopen(url).read())
+                    rgxp = '''http.*?favicon\.ico'''
+                    m = re.findall(rgxp, tmp.toxml(), re.I)
+                    if m:
+                        print("Trying {0}".format(m[0]))
+                        webfile = urllib2.urlopen(m[0], timeout=10)
+                        local_file = open(fav, 'w')
+                        local_file.write(webfile.read())
+                        local_file.close()
+                        webfile.close()
+                        print("Favicon found for {0}".format(feed['name']))
+                    else:
+                        print("No favicon available for {0}".format(feed['name']))
+                except Exception, e:
+                    print(e) 
         #if the file is empty, remove it
         if os.path.exists(fav) and not os.path.getsize(fav):
             os.unlink(fav)
@@ -805,14 +803,6 @@ class Engine (dbus.service.Object):
         self.log.debug("About to update {0} feed(s); otf: {1}".format(len(flist), otf))
         self.fcount = 0
         self.updating(len(flist))
-        #~ in_q = Queue(3)
-        #~ def yielder(q, c, a):
-            #~ while c > 0:
-                #~ thread = q.get(True)
-                #~ thread.join()
-                #~ a += 1
-                #~ c -= 1
-                #~ yield thread.get_result()
         for feed in flist:
             # let the UI know we're still busy
             name  = feed.get('name') or feed['url']
@@ -826,12 +816,9 @@ class Engine (dbus.service.Object):
                 self.log, 
                 )
             f.start()
-            #~ in_q.put(f)
-            # TODO: This is where you put it in the queue
             f.join()
             self.fcount += 1
-            yield feed
-        #~ yielder(in_q, len(flist), self.fcount)
+            yield f.get_result()
     def __loop_callback(self, feed):
         if feed:
             self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['name'].encode('utf-8'), self.fcount))
