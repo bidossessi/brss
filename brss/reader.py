@@ -279,7 +279,6 @@ class Reader (Gtk.Window, GObject.GObject):
         #~ self.set_default_icon(get_pixbuf())
         self.alert = Alerts(self)
         self.connect("destroy", self.quit)
-        self.show_all()
         
 
     def __connect_signals(self):    # signals
@@ -653,9 +652,10 @@ class Reader (Gtk.Window, GObject.GObject):
         #~ self.status.message('info', "{0}".format(
                 #~ item['name'].encode('utf-8')))
     def quit(self, *args):
+        self.destroy()
         Gtk.main_quit()
-    
     def start(self):
+        self.show_all()
         Gtk.main()
 
     def do_loaded(self, *args):
@@ -683,3 +683,7 @@ def run_reader(appclass, base_path):
         print "running brss-reader"
         service = ReaderService(appclass, base_path)
         service.app.start()
+
+class ReaderApplication(Gtk.Application):
+    def __init__(self, base_path):
+        self.reader = Reader(base_path)

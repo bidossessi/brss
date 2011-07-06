@@ -85,7 +85,7 @@ class FeedGetter(threading.Thread):
         if not feed.has_key('id'):
             feed['id'] = make_uuid(feed['url'])
         if not self.__otf:
-            self.log.debug('OTF disabled, skipping articles for [Feed] {0}'.format(feed['name'].encode('utf-8')))
+            self.log.debug('OTF disabled, skipping articles for [Feed] {0}'.format(feed['id']))
             feed['parse'] = 1
             self.result = feed
             return
@@ -99,11 +99,11 @@ class FeedGetter(threading.Thread):
         else: 
             feed['parse'] = 1
         if feed['parse'] == False:
-            self.log.debug('Too early to parse [Feed] {0}'.format(feed['name'].encode('utf-8')))
+            self.log.debug('Too early to parse [Feed] {0}'.format(feed['id']))
             self.result = feed
             return
         #parse it
-        self.log.debug('Parsing [Feed] {0}'.format(feed['name'].encode('utf-8')))
+        self.log.debug('Parsing [Feed] {0}'.format(feed['id']))
         try:
             f = feedparser.parse(feed['url'])# this can take quite a while
             self.log.debug('[Feed] {0} parsed'.format(feed))
@@ -132,7 +132,7 @@ class FeedGetter(threading.Thread):
                     self.log.warning( "Bozo exceptions found in feed {0}".format(feed['name']))
                     self.result = feed
                     return
-        self.log.debug('Fetching articles for {0}'.format(feed['name'].encode('utf-8')))
+        self.log.debug('Fetching articles for {0}'.format(feed['id']))
         #get articles
         feed['articles'] = []
         for i in range(0, feed['fetched_count']):
@@ -150,7 +150,7 @@ class FeedGetter(threading.Thread):
                 for i in remote_images:
                     self.__fetch_remote_image(self.images_path, i, article)
                 feed['articles'].append(article)
-        self.log.debug("[Feed] {0} fetched".format(feed['name'].encode('utf-8')))
+        self.log.debug("[Feed] {0} fetched".format(feed['id']))
         self.result = feed
     def __find_images_in_article(self, content):
         """Searches for img tags in article content."""
@@ -460,6 +460,7 @@ class Engine (dbus.service.Object):
             self.__add_category(c)
         self.__update_feeds(feeds, self.__otf) # on-the-fly policy
         self.notice('ok', 'Feeds imported!')
+        self.__update_all()
     
     @dbus.service.method('com.itgears.BRss.Engine', out_signature='aa{sv}')
     def search_for(self, string):
@@ -513,10 +514,9 @@ class Engine (dbus.service.Object):
 
     @dbus.service.signal('com.itgears.BRss.Engine', signature='a{sv}')
     def updated(self, item):
-        name = item.get('name') or item.get('id')
         self.log.debug("updated: [{0}] {1}".format(
             item['type'].capitalize(), 
-            name.encode('utf-8')))
+            item['id']))
 
     @dbus.service.signal('com.itgears.BRss.Engine')
     def complete(self, c):
@@ -787,9 +787,9 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
             #~ self.updated(feed)
-            #~ self.notice('info', "[Feed] {0} edited".format(feed['name'].encode('utf-8')))
+            #~ self.notice('info', "[Feed] {0} edited".format(feed['id']))
         except AssertionError:
-            self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['name'].encode('utf-8')))
+            self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['id']))
     def __update_all(self):
         feeds = []
         categories = self.__get_all_categories()
@@ -806,7 +806,7 @@ class Engine (dbus.service.Object):
         for feed in flist:
             # let the UI know we're still busy
             name  = feed.get('name') or feed['url']
-            self.notice("wait", "Updating [Feed] {0} ({1})".format(name.encode('utf-8'), self.fcount))
+            #~ self.notice("wait", "Updating [Feed] {0} ({1})".format(name.encode('utf-8'), self.fcount))
             f = FeedGetter(
                 feed, 
                 self.base_path, 
@@ -820,8 +820,8 @@ class Engine (dbus.service.Object):
             self.fcount += 1
             yield f.get_result()
     def __loop_callback(self, feed):
-        if feed:
-            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['name'].encode('utf-8'), self.fcount))
+        if feed and feed.has_key('id'):
+            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['id'], self.fcount))
             self.__add_items_for(feed)
             self.__update_ended(feed)
         else:
@@ -864,7 +864,7 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         self.conn.commit()
         cursor.close()    
-        self.notice('warning', "[Feed] {0} deleted!".format(feed['name'].encode('utf-8')))
+        self.notice('warning', "[Feed] {0} deleted!".format(feed['id']))
     def __delete_article(self, art_id):
         self.log.debug("Deleting article {0}".format(art_id))
         try:
@@ -922,7 +922,7 @@ class Engine (dbus.service.Object):
         cursor.close()
         if atotal > self.__max_entries:
             self.log.debug("Cropping feed {0} to the latest {1} unread articles".format(
-                    feed['name'].encode('utf-8'),
+                    feed['id'],
                     self.__max_entries))            
             # 1. if we have more unread than max_entries, no need to keep the read
             if utotal > self.__max_entries:
