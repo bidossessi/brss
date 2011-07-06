@@ -37,9 +37,11 @@ import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 from gi.repository import Gtk
+from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import Notify
+GObject.threads_init()
 Gdk.threads_init()
 
 from xml.etree  import ElementTree
@@ -162,12 +164,13 @@ class FeedGetter(threading.Thread):
         return images
     def __fetch_remote_image(self, path, src, article):
         """Get a article image and write it to a local file."""
-        time.sleep(30)##debug##
+        self.log.debug('Fetching remote image {0}'.format(src))
         if not os.path.exists(path):
             os.makedirs(path)
         name = make_uuid(src, False) # images with the same url get the same name
         image = os.path.join(path,name)
         if os.path.exists(image) and os.path.getsize(image) > 0: # we already have it, don't re-download
+            self.log.debug('Remote image {0} already fetched'.format(src))
             return {'name':name, 'url':src, 'article_id':article['id']}
         try:
             web_file = urllib2.urlopen(src, timeout=10)
@@ -183,7 +186,6 @@ class FeedGetter(threading.Thread):
             os.unlink(image)
     def __fetch_remote_favicon(self, path, parsed_feed, feed):
         """Find and download remote favicon for a feed."""
-        time.sleep(30)##debug##
         if not os.path.exists(path):
             os.makedirs(path)
         fav = os.path.join(path,feed['id'])
@@ -191,6 +193,7 @@ class FeedGetter(threading.Thread):
             self.log.debug("Favicon available for {0}".format(feed['name']))
             return True 
         #try The naufrago way
+        self.log.debug('Fetching remote favicon for {0}'.format(feed['id']))
         try:
             split = feed['url'].split("/")
             src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
@@ -949,6 +952,7 @@ class Engine (dbus.service.Object):
         if feed:
             #~ a = self.__count_articles(feed)
             #~ u = self.__count_unread_articles(feed)
+            feed['count'] = self.__count_unread_articles(feed)
             self.updated(feed)
             #~ self.notice('wait', "{0} updated | {1} articles | {2} unread".format(
                         #~ feed['name'], 
