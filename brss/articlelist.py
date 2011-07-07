@@ -145,7 +145,6 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.listview.set_search_column(4)
         # connect selection
         self.listselect = self.listview.get_selection()
-        self.listselect.connect("changed", self.__selection_changed)
         # containers
         self.msc = Gtk.ScrolledWindow()
         self.msc.set_shadow_type(Gtk.ShadowType.IN)
@@ -193,6 +192,9 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         
     def load_list(self, data):
         self.log.debug("{0}: Loading articles".format(self))
+        try:
+            self.listselect.disconnect_by_func(self.__selection_changed)
+        except:pass
         store = self.listview.get_model()
         store.clear()
         # store structure (id, read, starred, date, title, url, weight, feed_id)
@@ -282,12 +284,14 @@ class ArticleList (Gtk.VBox, GObject.GObject):
                 self.__select_iter(self.listview, niter)
 
     def __select_iter(self, treeview, iter):
-        model = treeview.get_model()
-        sel = treeview.get_selection()
-        path = model.get_path(iter)
-        sel.select_path(path)
-        treeview.scroll_to_cell(path, use_align=True)
-
+        try:
+            model = treeview.get_model()
+            sel = treeview.get_selection()
+            path = model.get_path(iter)
+            sel.select_path(path)
+            treeview.scroll_to_cell(path, use_align=True)
+        except Exception, e:
+            self.log.exception(e)
     def __search(self, col, value):
         """
         Returns a iter for the value we are looking for.
@@ -379,20 +383,25 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)    
     # convenience
-    #~ def do_item_selected(self, item):
-        #~ self.log.debug('{0}: Item selected {1}'.format(self, item))
-    def do_star_toggled(self, item):
-        self.log.debug('{0}: Star this {1}'.format(self, item['id']))
-    def do_read_toggled(self, item):
-        self.log.debug('{0}: Toggle this {1}'.format(self, item['id']))
+    def do_item_selected(self, item):
+        self.log.debug('{0}: Item selected {1}'.format(self, item))
+    #~ def do_star_toggled(self, item):
+        #~ self.log.debug('{0}: Star this {1}'.format(self, item['id']))
+    #~ def do_read_toggled(self, item):
+        #~ self.log.debug('{0}: Toggle this {1}'.format(self, item['id']))
     #~ def do_search_requested(self, item):
         #~ self.log.debug('{0}: Search for {1}'.format(self, item))
     #~ def do_no_data(self):
         #~ self.log.debug('{0}: No data found'.format(self))
     def do_list_loaded(self):
+        self.listselect.connect("changed", self.__selection_changed)
         #~ self.log.debug("{0}: selecting first item".format(self))
-        iter = self.store.get_iter_first()
-        self.__select_iter(self.listview, iter)
+        try:
+            iter = self.__search(0, self.current_item['id'])
+        except:
+            iter = self.store.get_iter_first()
+        if iter:
+            self.__select_iter(self.listview, iter)
         self.listview.grab_focus()
 
 class ArticleListMenu(Gtk.Menu):
