@@ -23,6 +23,7 @@
 #       
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import Gio
 from gi.repository import Pango
 from gi.repository import GObject
 import dbus
@@ -33,14 +34,14 @@ import os
 import subprocess
 import time
 # our stuff
-from itemlist   import ItemList
-from tree       import Tree
-from view       import View
-from status     import Status
-from alerts     import Alerts
-from dialogs    import Dialog
-from functions  import make_path, make_pixbuf
-from logger     import Logger
+from articlelist    import ArticleList
+from tree           import Tree
+from view           import View
+from status         import Status
+from alerts         import Alerts
+from dialogs        import Dialog
+from functions      import make_path, make_pixbuf
+from logger         import Logger
 
 class Reader (Gtk.Window, GObject.GObject):
     """
@@ -87,7 +88,7 @@ class Reader (Gtk.Window, GObject.GObject):
 
         # ui elements
         self.tree = Tree(base_path, self.log)
-        self.ilist = ItemList(self.log)
+        self.ilist = ArticleList(self.log)
         self.ilist.set_property("height-request", 250)
         self.view = View(self.log)
         self.status = Status()
@@ -127,6 +128,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.set_configs         = self.engine.get_dbus_method('set_configs', 'com.itgears.BRss.Engine')
         self.import_opml         = self.engine.get_dbus_method('import_opml', 'com.itgears.BRss.Engine')
         self.export_opml         = self.engine.get_dbus_method('export_opml', 'com.itgears.BRss.Engine')
+        self.log.warning("Hiding reconnect icon!")
         self.rag.set_visible(False)
         self.ag.set_visible(True)
         self.__connect_engine_signals()
@@ -239,7 +241,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ui = Gtk.UIManager()
         self.ui.insert_action_group(self.mag, 0)
         self.ui.insert_action_group(self.ag, 0)
-        self.ui.insert_action_group(self.rag, 0)
+        self.ui.insert_action_group(self.rag, 1)
         self.ui.add_ui_from_string(ui_string)
         self.add_accel_group(self.ui.get_accel_group())
 
@@ -279,6 +281,7 @@ class Reader (Gtk.Window, GObject.GObject):
         #~ self.set_default_icon(get_pixbuf())
         self.alert = Alerts(self)
         self.connect("destroy", self.quit)
+        self.show_all()
         
 
     def __connect_signals(self):    # signals
@@ -640,11 +643,13 @@ class Reader (Gtk.Window, GObject.GObject):
             self.fullscreen()
             self.is_fullscreen = True
     def __reconnect(self, *args):
+        self.log.warning("Trying to reconnect to engine!")
         self.__get_engine()
         self.emit('loaded')
     def __no_engine(self, *args):
         self.log.warning("Lost connection with engine!")
         self.status.message('critical', "Cannot connect to the Feed Engine")
+        self.log.debug("Showing reconnect icon!")
         self.rag.set_visible(True)
         self.ag.set_visible(False)
         self.__update_done()
@@ -655,7 +660,6 @@ class Reader (Gtk.Window, GObject.GObject):
         self.destroy()
         Gtk.main_quit()
     def start(self):
-        self.show_all()
         Gtk.main()
 
     def do_loaded(self, *args):
@@ -665,8 +669,8 @@ class Reader (Gtk.Window, GObject.GObject):
 
 
 class ReaderService(dbus.service.Object):
-    def __init__(self, appclass, base_path):
-        self.app = appclass(base_path)
+    def __init__(self, base_path):
+        self.app = Reader(base_path)
         bus_name = dbus.service.BusName('com.itgears.BRss.Reader', bus = dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, '/com/itgears/BRss/Reader')
 
@@ -674,16 +678,17 @@ class ReaderService(dbus.service.Object):
     def show_window(self):
         self.app.present()
 
-def run_reader(appclass, base_path):
+def run_reader(base_path):
     if dbus.SessionBus().request_name('com.itgears.BRss.Reader') != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "brss-reader already running"
         method = dbus.SessionBus().get_object('com.itgears.BRss.Reader', '/com/itgears/BRss/Reader').get_dbus_method("show_window")
         method()
     else:
         print "running brss-reader"
-        service = ReaderService(appclass, base_path)
+        service = ReaderService(base_path)
         service.app.start()
 
-class ReaderApplication(Gtk.Application):
-    def __init__(self, base_path):
-        self.reader = Reader(base_path)
+#~ class ReaderApplication(Gtk.Application):
+    #~ """GApplication implementation"""
+    #~ def __init__(self, base_path):
+        #~ self.reader = Reader(base_path)

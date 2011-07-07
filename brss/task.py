@@ -9,6 +9,7 @@ import threading, thread
 ### GError: Could not locate g_thread_init: `g_thread_init': /usr/lib/libglib-2.0.so.0: undefined symbol: g_thread_init
 #~ from gi.repository import GLib
 #~ GLib.thread_init(None)
+#TODO: move to GLib Threading
 import gobject
 gobject.threads_init()
 

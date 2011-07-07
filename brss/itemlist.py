@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#       itemlist.py
+#       ArticleList.py
 #       
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
 #       
@@ -27,9 +27,9 @@ from gi.repository import GObject
 from gi.repository import Pango
 from functions import make_date
 
-class ItemList (Gtk.VBox, GObject.GObject):
+class ArticleList (Gtk.VBox, GObject.GObject):
     """
-        The itemlist, well, lists all available feed items for the selected
+        The ArticleList, well, lists all available feed items for the selected
         feed.
     """
     __gsignals__ = {
@@ -156,15 +156,15 @@ class ItemList (Gtk.VBox, GObject.GObject):
         self.pack_start(self.fbox, False, False,0)
         self.pack_start(self.mal, True, True,0)
         self.set_property("width-request", 600)
-        menu = ItemListMenu(self)
+        menu = ArticleListMenu(self)
         self.current_item = None
-        GObject.type_register(ItemList)
+        GObject.type_register(ArticleList)
         self.__lock__ = False
         self.listselect.set_select_function(self.__skip_toggles, None)
         self.fbox.set_no_show_all(True)
         self.search_on = False
     def __repr__(self):
-        return "ItemList"
+        return "ArticleList"
         
     def __get_weight(self, read):
         if read and int(read) > 0:
@@ -391,10 +391,11 @@ class ItemList (Gtk.VBox, GObject.GObject):
         #~ self.log.debug('{0}: No data found'.format(self))
     def do_list_loaded(self):
         #~ self.log.debug("{0}: selecting first item".format(self))
-        self.listselect.select_path((0,))
+        iter = self.store.get_iter_first()
+        self.__select_iter(self.listview, iter)
         self.listview.grab_focus()
 
-class ItemListMenu(Gtk.Menu):
+class ArticleListMenu(Gtk.Menu):
     """
     FeedTreeMenu extends the standard Gtk.Menu by adding methods 
     for context handling.

@@ -21,7 +21,10 @@
 #       MA 02110-1301, USA.
 #       
 #       
-#TODO: Stopping updates
+#TODO: Moving configs to gsettings
+#TODO: Moving async code to GIO
+#TODO: Moving file operation code to GIO
+#TODO: Moving database operations to Gda
 import time
 import datetime
 import sqlite3
@@ -1113,7 +1116,7 @@ class Engine (dbus.service.Object):
             INSERT INTO config VALUES('interval', '60');
             INSERT INTO config VALUES('hide-read', '0');
             INSERT INTO config VALUES('otf', '0');
-            INSERT INTO config VALUES('notify', '0');
+            INSERT INTO config VALUES('notify', '1');
             INSERT INTO config VALUES('auto-update', '1');
             INSERT INTO config VALUES('debug', '0');
             INSERT INTO categories VALUES('uncategorized', 'Uncategorized');

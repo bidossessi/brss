@@ -65,6 +65,6 @@ def run_frontend():
         time.sleep(max)
         i +=1
     if check_engine():
-        run_reader(Reader, BASE_PATH)
+        run_reader(BASE_PATH)
     else:
         print "Couldn't start engine"

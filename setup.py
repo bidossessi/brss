@@ -31,9 +31,9 @@ if platform.system() in ('Linux', 'SunOS'):
     icons = glob.glob("brss/icons/*")
     pixmaps = glob.glob("brss/pixmaps/*")
     data_files.extend([
-        ("applications", applications),
-        ("icons", icons),
-        ("pixmaps", pixmaps),
+        ("/usr/share/applications", applications),
+        ("/usr/share/icons", icons),
+        ("/usr/share/pixmaps", pixmaps),
         ])
 
 setup(
@@ -67,7 +67,7 @@ setup(
         'console_scripts': ['brss-engine = brss.launcher:run_engine'],
        },
     package_dir = {'brss': 'brss'},
-    package_data = {},
-    include_package_data = True,
+    #~ package_data = {},
+    #~ include_package_data = True,
     data_files = data_files
 )
