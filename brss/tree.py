@@ -322,7 +322,7 @@ class Tree (Gtk.VBox, GObject.GObject):
 
     def update_row(self, item):
         #find the item
-        self.log.debug("Updating row {0}".format(item))
+        self.log.debug("Updating row {0}".format(item['id']))
         iter = self.__search(1, item['id'])
         if iter:
             for k,v in item.iteritems():

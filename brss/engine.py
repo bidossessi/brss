@@ -39,6 +39,7 @@ import dbus.service
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import GLib
@@ -95,14 +96,15 @@ class FeedGetter(threading.Thread):
             self.result = feed
             return
         if feed.has_key('parse'):
-            if feed['parse']:
+            if not feed['parse']:
                 interval = self.__update_interval*60
                 now = time.time()
                 elapsed = now - feed['timestamp']
+                self.log.debug("Elapsed: {0}, interval: {1}".format(elapsed, interval))
                 if elapsed > interval:
-                    feed['parse'] = 1
+                    feed['parse'] = True
         else: 
-            feed['parse'] = 1
+            feed['parse'] = True
         if feed['parse'] == False:
             self.log.debug('Too early to parse [Feed] {0}'.format(feed['id']))
             self.result = feed
@@ -651,7 +653,7 @@ class Engine (dbus.service.Object):
             cursor = self.conn.cursor()
             for img in art['images']:
                 cursor.execute('INSERT INTO images VALUES(null, ?, ?, ?)', 
-                    [img['name'],img['url'],img['article_id']])
+                    [img['name'].decode('utf-8'),img['url'],img['article_id']])
             self.conn.commit()
             cursor.close()
             self.__added_count += 1
@@ -823,9 +825,9 @@ class Engine (dbus.service.Object):
                 )
             f.start()
             f.join()
-            self.fcount += 1
             yield f.get_result()
     def __loop_callback(self, feed):
+        self.fcount += 1
         if feed and feed.has_key('id'):
             self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['id'], self.fcount))
             self.__add_items_for(feed)
@@ -1132,7 +1134,7 @@ class Engine (dbus.service.Object):
             n = Notify.Notification.new(
                 "BRss started",
                 "BRss Feed Engine is running",
-                make_path('icons', 'brss.svg'))
+                make_path('icons', 'brss-engine.svg'))
             n.show()
 
     def __notify_update(self, c, ac):
@@ -1143,7 +1145,7 @@ class Engine (dbus.service.Object):
                 "BRss: Update report",
                 "Updated {0} feeds\n{1} new article(s)\n{2} unread article(s)".format(
                     c, ac, self.__count_unread_articles()),
-                make_path('icons', 'brss.svg'))
+                make_path('icons', 'brss-engine.svg'))
             n.show()
 
     def __get_config(self, key):

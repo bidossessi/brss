@@ -552,7 +552,7 @@ class Reader (Gtk.Window, GObject.GObject):
         if item['type'] == 'article':
             return self.ilist.insert_row(item)
     def __handle_updated(self, item):
-        self.log.debug("{0}: Updated item: {1}".format(self, item['id']))
+        #~ self.log.debug("{0}: Updated item: {1}".format(self, item['id']))
         if item['type'] in ['feed', 'category']:
             return self.tree.update_row(item)
         if item['type'] == 'article':
