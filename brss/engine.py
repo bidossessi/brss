@@ -176,7 +176,8 @@ class FeedGetter(threading.Thread):
         image = os.path.join(path,name)
         if os.path.exists(image) and os.path.getsize(image) > 0: # we already have it, don't re-download
             self.log.debug('Remote image {0} already fetched'.format(src))
-            return {'name':name, 'url':src, 'article_id':article['id']}
+            article['images'].append({'name':name, 'url':src, 'article_id':article['id']})
+            return
         try:
             web_file = urllib2.urlopen(src, timeout=10)
             local_file = open(image, 'w')
@@ -634,6 +635,7 @@ class Engine (dbus.service.Object):
             self.log.debug('[Feed] {0} already exists! Aborting'.format(feed['name']))
     def __add_article(self, art):
         try:
+            self.log.debug("inserting [Article] {0}".format(art['id']))
             assert self.__item_exists('articles', 'url', art['url']) == False
             cursor = self.conn.cursor()
             cursor.execute (
@@ -650,15 +652,28 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
             #inser images
-            cursor = self.conn.cursor()
             for img in art['images']:
-                cursor.execute('INSERT INTO images VALUES(null, ?, ?, ?)', 
-                    [img['name'].decode('utf-8'),img['url'],img['article_id']])
-            self.conn.commit()
-            cursor.close()
+                self.__add_image(img)
             self.__added_count += 1
         except AssertionError:
             self.log.debug("article {0} already exists, skipping".format(art['id']))
+    def __add_image(self, img):
+        try:
+            self.log.debug("Inserting image {0}".format(img['url']))
+            assert self.__item_exists('images', 'url', img['url']) == False
+            cursor = self.conn.cursor()
+            cursor.execute(
+                'INSERT INTO images VALUES(null, ?, ?, ?)', 
+                [
+                    img['name'].decode('utf-8'),
+                    img['url'],
+                    img['article_id'].decode('utf8')
+                ]
+            )
+            self.conn.commit()
+            cursor.close()
+        except AssertionError:
+            self.log.debug("image {0} already exists, skipping".format(img['name']))
     def __add_items_for(self, feed):
         if feed:
             try:
@@ -741,6 +756,7 @@ class Engine (dbus.service.Object):
         cursor.close()
         return feeds
     def __get_article(self, id):
+        self.log.debug("Fetching [Article] {0}".format(id))
         q = 'SELECT id,title,date,url,content, starred,feed_id FROM articles WHERE id = "{0}"'.format(id)
         # run query
         cursor = self.conn.cursor()
@@ -983,7 +999,6 @@ class Engine (dbus.service.Object):
         item[col] = bmap.get(item[col])
         self.log.debug("Toggling {0}: {1} on {2}".format(col, item[col], item['id']))
         q = 'UPDATE articles set {0} = {1} WHERE id = "{2}"'.format(col, int(item[col]), item['id'])
-        print q
         cursor = self.conn.cursor()
         cursor.execute(q)
         self.conn.commit()
@@ -1057,6 +1072,7 @@ class Engine (dbus.service.Object):
         cursor.execute('SELECT name,url FROM images WHERE article_id = ?', [article['id']])
         row = cursor.fetchall()
         if (row is not None) and (len(row)>0):
+            self.log.debug("Swapping image tags for [Article] {0}".format(article['id']))
             for img in row:
                 t = 'file://' + os.path.join(self.images_path, str(img[0]))
                 article['content'] = article['content'].replace(
@@ -1120,7 +1136,7 @@ class Engine (dbus.service.Object):
             INSERT INTO config VALUES('otf', '0');
             INSERT INTO config VALUES('notify', '1');
             INSERT INTO config VALUES('auto-update', '1');
-            INSERT INTO config VALUES('debug', '0');
+            INSERT INTO config VALUES('debug', '1');
             INSERT INTO categories VALUES('uncategorized', 'Uncategorized');
             ''')
         self.conn.commit()
