@@ -20,7 +20,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 #       
-#       
+# TODO: 
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
@@ -61,6 +61,10 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             GObject.SignalFlags.RUN_LAST, 
             None,
             (GObject.TYPE_PYOBJECT,)),
+        "no-more-items" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            ()),
         "dcall-request" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
@@ -271,10 +275,12 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     def next_item(self, *args):
         model, iter = self.listselect.get_selected()
         niter = model.iter_next(iter)
-        try: self.__select_iter(self.listview, niter)
-        except Exception, e:
-            self.log.exception(e) 
-    
+        if niter:
+            try: self.__select_iter(self.listview, niter)
+            except Exception, e:
+                self.log.exception(e) 
+        else:
+            self.emit('no-more-items')
     def previous_item(self, *args):
         model, iter = self.listselect.get_selected()
         if iter:
@@ -282,6 +288,8 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             if int(s) > 0:
                 niter = model.get_iter_from_string(str(int(s)-1))
                 self.__select_iter(self.listview, niter)
+        else:
+            self.emit('no-more-items')
 
     def __select_iter(self, treeview, iter):
         try:

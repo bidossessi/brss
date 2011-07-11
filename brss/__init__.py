@@ -22,7 +22,7 @@
 #       
 #       
 
-__version__     = '0.5'
+__version__     = '0.5.1'
 __authors__     = ["Bidossessi SODONON"]
 __maintainers__ = ["Bidossessi SODONON"]
 __documenters__ = ["Bidossessi SODONON"]

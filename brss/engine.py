@@ -24,7 +24,6 @@
 #TODO: Moving configs to gsettings
 #TODO: Moving async code to GIO
 #TODO: Moving file operation code to GIO
-#TODO: Moving database operations to Gda
 import time
 import datetime
 import sqlite3
@@ -91,7 +90,7 @@ class FeedGetter(threading.Thread):
         if not feed.has_key('id'):
             feed['id'] = make_uuid(feed['url'])
         if not self.__otf:
-            self.log.debug('OTF disabled, skipping articles for [Feed] {0}'.format(feed['id']))
+            self.log.debug('OTF disabled, skipping articles for [Feed] {0}'.format(feed['url']))
             feed['parse'] = 1
             self.result = feed
             return
@@ -106,11 +105,11 @@ class FeedGetter(threading.Thread):
         else: 
             feed['parse'] = True
         if feed['parse'] == False:
-            self.log.debug('Too early to parse [Feed] {0}'.format(feed['id']))
+            self.log.debug('Too early to parse [Feed] {0}'.format(feed['url']))
             self.result = feed
             return
         #parse it
-        self.log.debug('Parsing [Feed] {0}'.format(feed['id']))
+        self.log.debug('Parsing [Feed] {0}'.format(feed['url']))
         try:
             f = feedparser.parse(feed['url'])# this can take quite a while
             self.log.debug('[Feed] {0} parsed'.format(feed))
@@ -139,7 +138,7 @@ class FeedGetter(threading.Thread):
                     self.log.warning( "Bozo exceptions found in feed {0}".format(feed['name']))
                     self.result = feed
                     return
-        self.log.debug('Fetching articles for {0}'.format(feed['id']))
+        self.log.debug('Fetching articles for {0}'.format(feed['url']))
         #get articles
         feed['articles'] = []
         for i in range(0, feed['fetched_count']):
@@ -157,7 +156,7 @@ class FeedGetter(threading.Thread):
                 for i in remote_images:
                     self.__fetch_remote_image(self.images_path, i, article)
                 feed['articles'].append(article)
-        self.log.debug("[Feed] {0} fetched".format(feed['id']))
+        self.log.debug("[Feed] {0} fetched".format(feed['url']))
         self.result = feed
     def __find_images_in_article(self, content):
         """Searches for img tags in article content."""
@@ -176,7 +175,7 @@ class FeedGetter(threading.Thread):
         image = os.path.join(path,name)
         if os.path.exists(image) and os.path.getsize(image) > 0: # we already have it, don't re-download
             self.log.debug('Remote image {0} already fetched'.format(src))
-            article['images'].append({'name':name, 'url':src, 'article_id':article['id']})
+            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
             return
         try:
             web_file = urllib2.urlopen(src, timeout=10)
@@ -184,7 +183,7 @@ class FeedGetter(threading.Thread):
             local_file.write(web_file.read())
             local_file.close()
             web_file.close()
-            article['images'].append({'name':name, 'url':src, 'article_id':article['id']})
+            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
         except Exception, e:
             print(e)
         #if the file is empty, remove it
@@ -199,7 +198,7 @@ class FeedGetter(threading.Thread):
             self.log.debug("Favicon available for {0}".format(feed['name']))
             return True 
         #try The naufrago way
-        self.log.debug('Fetching remote favicon for {0}'.format(feed['id']))
+        self.log.debug('Fetching remote favicon for {0}'.format(feed['url']))
         try:
             split = feed['url'].split("/")
             src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
@@ -221,7 +220,7 @@ class FeedGetter(threading.Thread):
                     rgxp = '''http.*?favicon\.ico'''
                     m = re.findall(rgxp, tmp.toxml(), re.I)
                     if m:
-                        print("Trying {0}".format(m[0]))
+                        print("Now Trying {0}".format(m[0]))
                         webfile = urllib2.urlopen(m[0], timeout=10)
                         local_file = open(fav, 'w')
                         local_file.write(webfile.read())
@@ -269,7 +268,7 @@ class FeedGetter(threading.Thread):
         uid = make_uuid(content+link+title, False) # if
         #article ready
         article =  {
-            'timestamp':secs, 
+            'date':secs, 
             'title':title, 
             'content':content, 
             'url':link, 
@@ -444,7 +443,7 @@ class Engine (dbus.service.Object):
         opml.close()
 
     @dbus.service.method('com.itgears.BRss.Engine')
-    def import_opml(self, filename):#FIXME: group calls
+    def import_opml(self, filename):
         """Import feeds and categories from an OPML file."""
         f = open(os.path.abspath(filename), 'r')
         tree = ElementTree.parse(f)
@@ -581,6 +580,7 @@ class Engine (dbus.service.Object):
         self.__otf              = self.__get_config('otf')
         self.__auto_update      = self.__get_config('auto-update')
         self.__added_count      = 0
+        self.__deleted_feeds    = []
         self.log.enable_debug(self.__get_config('debug'))
         # d-bus
         bus_name = dbus.service.BusName('com.itgears.BRss.Engine', bus=dbus.SessionBus())
@@ -639,14 +639,15 @@ class Engine (dbus.service.Object):
             assert self.__item_exists('articles', 'url', art['url']) == False
             cursor = self.conn.cursor()
             cursor.execute (
-                'INSERT INTO articles VALUES(?, ?, ?, ?, ?, 0, 0, ?)', 
+                'INSERT INTO articles VALUES(?, ?, ?, ?, ?, 0, 0, ?, ?)', 
                 [
                     art['id'].decode("utf-8"),
                     art['title'].decode("utf-8"),
                     art['content'].decode("utf-8"),
-                    art['timestamp'],
+                    art['date'],
                     art['url'].decode("utf-8"),
                     art['feed_id'],
+                    art['timestamp'],
                 ]
             )
             self.conn.commit()
@@ -658,24 +659,38 @@ class Engine (dbus.service.Object):
         except AssertionError:
             self.log.debug("article {0} already exists, skipping".format(art['id']))
     def __add_image(self, img):
+        cursor = self.conn.cursor()
         try:
             self.log.debug("Inserting image {0}".format(img['url']))
             assert self.__item_exists('images', 'url', img['url']) == False
-            cursor = self.conn.cursor()
             cursor.execute(
-                'INSERT INTO images VALUES(null, ?, ?, ?)', 
+                'INSERT INTO images VALUES(?, ?)', 
                 [
-                    img['name'].decode('utf-8'),
+                    img['id'].decode('utf-8'),
                     img['url'],
+                ]
+            )
+            self.conn.commit()
+        except AssertionError:
+            self.log.debug("image {0} already exists, skipping".format(img['url']))
+        try:
+            id = make_uuid(img['id']+img['article_id'], False)
+            assert self.__item_exists('images_pool', 'id', id) == False
+            cursor.execute(
+                'INSERT INTO images_pool VALUES(?, ?, ?)', 
+                [
+                    id.decode('utf-8'),
+                    img['id'].decode('utf-8'),
                     img['article_id'].decode('utf8')
                 ]
             )
             self.conn.commit()
             cursor.close()
         except AssertionError:
-            self.log.debug("image {0} already exists, skipping".format(img['name']))
+            self.log.debug("image {0} already linked to article {1}, skipping".format(
+                img['url'], img['articl_id']))
     def __add_items_for(self, feed):
-        if feed:
+        if feed and not feed['url'] in self.__deleted_feeds:
             try:
                 articles = feed.pop('articles') # we don't need them here
             except KeyError:
@@ -687,6 +702,8 @@ class Engine (dbus.service.Object):
             feed['timestamp'] = time.time()
             if articles:
                 feed['parse'] = 0
+            else:
+                feed['parse'] = 1                
             if self.__item_exists('feeds', 'id', feed['id']):
                 self.__edit_feed(feed)
             # else create if it doesn't
@@ -707,6 +724,7 @@ class Engine (dbus.service.Object):
             cursor.close()
             if articles:
                 for art in articles:
+                    art['timestamp'] = feed['timestamp']
                     self.__add_article(art)
             self.__clean_up_feed(feed) # returns (total, unread, starred)
 
@@ -798,7 +816,7 @@ class Engine (dbus.service.Object):
             assert self.__item_exists('feeds', 'id', feed['id']) == True
             # we don't want duplicate feeds
             assert self.__item_exists('feeds', 'url', feed['url']) == True
-            self.log.debug("Editing feed {0}".format(feed['id']))
+            self.log.debug("Editing feed {0}".format(feed['url']))
             # update in database
             q = 'UPDATE feeds SET name = "{0}", url = "{1}", timestamp = "{2}", parse = "{3}" WHERE id = "{4}"'.format(
                 feed['name'], 
@@ -811,9 +829,9 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
             #~ self.updated(feed)
-            #~ self.notice('info', "[Feed] {0} edited".format(feed['id']))
+            #~ self.notice('info', "[Feed] {0} edited".format(feed['url']))
         except AssertionError:
-            self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['id']))
+            self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['url']))
     def __update_all(self):
         feeds = []
         categories = self.__get_all_categories()
@@ -888,29 +906,15 @@ class Engine (dbus.service.Object):
         cursor.execute(q)
         self.conn.commit()
         cursor.close()    
-        self.notice('warning', "[Feed] {0} deleted!".format(feed['id']))
+        self.__deleted_feeds.append(feed['url'])
+        self.notice('warning', "[Feed] {0} deleted!".format(feed['url']))
     def __delete_article(self, art_id):
         self.log.debug("Deleting article {0}".format(art_id))
         try:
             assert self.__item_exists('articles', 'id', art_id) == True
             # delete images first.
-            q = 'SELECT name FROM images WHERE article_id = "{0}"'.format(art_id)
+            self.__delete_images(art_id)
             cursor = self.conn.cursor()
-            cursor.execute(q)
-            rows = cursor.fetchall()
-            if (rows is not None) and (len(rows)>0):
-                for i in rows:
-                    filename = os.path.join(self.images_path,i[0])
-                    self.log.debug("Deleting image: {0}".format(filename))
-                    try:
-                        os.unlink(filename)
-                    except Exception, e: 
-                        self.log.exception(e) 
-
-            # now remove image entries in DB
-            q = 'DELETE FROM images WHERE article_id = "{0}"'.format(art_id)
-            cursor.execute(q)
-            self.conn.commit()
             # now delete article
             q = 'DELETE FROM articles WHERE id = "{0}"'.format(art_id)
             cursor.execute(q)
@@ -918,6 +922,33 @@ class Engine (dbus.service.Object):
             cursor.close()        
         except AssertionError:
             self.log.debug("Article {0} doesn't exist or could not be deleted".format(art_id))
+    def __delete_images(self, art_id):
+        cursor = self.conn.cursor()
+        q = 'SELECT DISTINCT image_id FROM images_pool WHERE article_id = "{0}"'.format(art_id)
+        cursor.execute(q)
+        imgs = cursor.fetchall()
+        if imgs:
+            for i in imgs:
+                #confirm if we still have refs to this image
+                q = 'SELECT COUNT(id) from images_pool WHERE image_id = "{0}"'.format(i[0])
+                cursor.execute(q)
+                c = cursor.fetchone()
+                if c and c[0] == 1:
+                    filename = os.path.join(self.images_path,i[0])
+                    self.log.debug("No more reference to image {0}, deleting from filesystem".format(filename))
+                    try:
+                        os.unlink(filename)
+                        # now remove image entry
+                        q = 'DELETE FROM images WHERE id = "{0}"'.format(i[0])
+                        cursor.execute(q)
+                        self.conn.commit()
+                    except Exception, e: 
+                        self.log.exception(e) 
+        # remove article images from pool
+        q = 'DELETE FROM images_pool WHERE article_id = "{0}"'.format(art_id)
+        cursor.execute(q)
+        self.conn.commit()
+        cursor.close()
 
     ## Convenience functions
     def __clean_up_feed(self, feed):
@@ -1069,7 +1100,8 @@ class Engine (dbus.service.Object):
         """
         links = []
         cursor = self.conn.cursor()
-        cursor.execute('SELECT name,url FROM images WHERE article_id = ?', [article['id']])
+        q = 'SELECT p.image_id,i.url FROM images_pool p JOIN images i ON p.image_id = i.id WHERE p.article_id = "{0}"'.format(article['id'].decode('utf-8'))
+        cursor.execute(q)
         row = cursor.fetchall()
         if (row is not None) and (len(row)>0):
             self.log.debug("Swapping image tags for [Article] {0}".format(article['id']))
@@ -1125,11 +1157,36 @@ class Engine (dbus.service.Object):
         self.log.info("Initializing database")
         cursor = self.conn.cursor()
         cursor.executescript('''
-            CREATE TABLE config(key varchar(32) PRIMARY KEY, value varchar(256) NOT NULL);
-            CREATE TABLE categories(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL);
-            CREATE TABLE feeds(id varchar(256) PRIMARY KEY, name varchar(32) NOT NULL, url varchar(1024) NOT NULL, category_id integer NOT NULL, timestamp integer NOT NULL, parse INTEGER NOT NULL);
-            CREATE TABLE articles(id varchar(256) PRIMARY KEY, title varchar(256) NOT NULL, content text, date integer NOT NULL, url varchar(1024) NOT NULL, read INTEGER NOT NULL, starred INTEGER NOT NULL, feed_id integer NOT NULL);
-            CREATE TABLE images(id integer PRIMARY KEY, name varchar(256) NOT NULL, url TEXT NOT NULL, article_id varchar(256) NOT NULL);
+            CREATE TABLE config(
+                key varchar(32) PRIMARY KEY, 
+                value varchar(256) NOT NULL);
+            CREATE TABLE categories(
+                id varchar(256) PRIMARY KEY, 
+                name varchar(32) NOT NULL);
+            CREATE TABLE feeds(
+                id varchar(256) PRIMARY KEY, 
+                name varchar(32) NOT NULL, 
+                url varchar(1024) NOT NULL, 
+                category_id integer NOT NULL, 
+                timestamp integer NOT NULL, 
+                parse INTEGER NOT NULL);
+            CREATE TABLE articles(
+                id varchar(256) PRIMARY KEY, 
+                title varchar(256) NOT NULL, 
+                content text, 
+                date integer NOT NULL, 
+                url varchar(1024) NOT NULL, 
+                read INTEGER NOT NULL, 
+                starred INTEGER NOT NULL, 
+                feed_id integer NOT NULL, 
+                timestamp integer NOT NULL);
+            CREATE TABLE images_pool(
+                id varchar(256) PRIMARY KEY, 
+                image_id varchar(256) NOT NULL, 
+                article_id varchar(256) NOT NULL);
+            CREATE TABLE images(
+                id varchar(256) PRIMARY KEY, 
+                url TEXT NOT NULL);
             INSERT INTO config VALUES('max', '10');
             INSERT INTO config VALUES('interval', '60');
             INSERT INTO config VALUES('hide-read', '0');

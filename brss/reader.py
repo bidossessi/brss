@@ -288,7 +288,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.log.debug("{0}: Connecting all signals".format(self))
         self.connect('next-article', self.ilist.next_item)
         self.connect('previous-article', self.ilist.previous_item)
-        self.connect('next-feed', self.tree.next_item)#TODO: implement
+        self.connect('next-feed', self.tree.next_item)
         self.connect('previous-feed', self.tree.previous_item)#TODO: implement
         self.connect('search-toggled', self.ilist.toggle_search)
         self.connect_after('no-engine', self.__no_engine)
