@@ -21,6 +21,10 @@ brss-engine is a dbus service. Its main features are:
 
 2. brss-reader
 brss-reader is a GTK+ client for brss-engine.
+    - Connects to brss-engine
+    - Keyboard feed and article navigation (à la Thunderbird)
+    - full-screen article viewing
+    - Article search engine
 
 TODO:
 -----
