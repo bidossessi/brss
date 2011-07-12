@@ -22,8 +22,11 @@
 #       
 #       
 
-__version__     = '0.5.1'
-__authors__     = ["Bidossessi SODONON"]
-__maintainers__ = ["Bidossessi SODONON"]
-__documenters__ = ["Bidossessi SODONON"]
-__artists__     = ["Bidossessi SODONON"]
+__version__         = '0.6'
+__authors__         = ["Bidossessi SODONON"]
+__maintainers__     = ["Bidossessi SODONON"]
+__documenters__     = ["Bidossessi SODONON"]
+__artists__         = ["Bidossessi SODONON"]
+BASE_KEY            = 'com.itgears.BRss'
+ENGINE_DBUS_KEY     = 'com.itgears.BRss.Engine'
+ENGINE_DBUS_PATH    = '/com/itgears/BRss/Engine'

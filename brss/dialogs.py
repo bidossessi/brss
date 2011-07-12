@@ -23,6 +23,7 @@
 #       
 
 from gi.repository import Gtk
+from gi.repository import Gio
 class Custom:
     def __init__(self, name, header):
         self.name = name
@@ -41,18 +42,20 @@ class TextEntry(Gtk.Entry, Custom) :
         value = self.get_text().replace("\n","").replace("\r","")
         return value
 
-class NumEntry(Gtk.Entry, Custom) :
+class NumEntry(Gtk.SpinButton, Custom) :
     def __init__(self, name, header):
-        Gtk.Entry.__init__(self)
+        a = Gtk.Adjustment.new(0, 0, 1000, 1, 10, 10)
+        Gtk.SpinButton.__init__(self)
+        self.set_adjustment(a)
         Custom.__init__(self, name, header)
-        self.set_alignment(1.0)
+        #~ self.set_alignment(1.0)
     
-    def set_value(self, value):
-        self.set_text(str(value))
+    #~ def set_value(self, value):
+        #~ Gtk.SpinButton.set_value(self, value)
 
     def get_value(self, suppress=False):
-        value = self.get_text().replace("\n","").replace("\r","")
-        return int(value)
+        value = self.get_value_as_int()
+        return value
         
 class CheckBtn(Gtk.CheckButton, Custom) :
 
@@ -67,20 +70,25 @@ class CheckBtn(Gtk.CheckButton, Custom) :
         return self.get_active()
 
 class Dialog(Gtk.Dialog):
-    def __init__(self, caller, title, args):
+    def __init__(self, caller, title, args, settings=None):
+        if settings:
+            b = (
+                Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE)
+        else:
+            b = (
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_APPLY, Gtk.ResponseType.OK)
         Gtk.Dialog.__init__(
             self,
             flags=Gtk.DialogFlags.MODAL|Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            buttons=(
-                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                Gtk.STOCK_APPLY, Gtk.ResponseType.OK)
+            buttons=b
                 )
         self.__widget_list = []
         self.__create_ui()
         self.set_title (title)
         self.set_transient_for(caller)
         for w in args:
-            self.make_widget(w)
+            self.make_widget(w, settings)
         self.grid(self.__widget_list)
         self.show_all()
         
@@ -103,14 +111,25 @@ class Dialog(Gtk.Dialog):
         header.set_alignment(0, 0.5)
         return header
     
-    def make_widget(self, w):
+    def make_widget(self, w, settings):
         # w = {'name':?, 'type':?}
         gmap = {'bool':CheckBtn, 'str':TextEntry, 'int':NumEntry}
         widget = gmap.get(w['type'])(w['name'], w['header'])
-        if w.has_key('value'):
-            widget.set_value(w['value'])
+        if settings:
+            if w['type'] == 'bool':
+                settings.bind(w['name'], widget, 'active',Gio.SettingsBindFlags.DEFAULT)
+                widget.set_value(settings.get_boolean(w['name']))
+            elif w['type'] == 'int':
+                settings.bind(w['name'], widget, 'value',Gio.SettingsBindFlags.DEFAULT)
+                widget.set_value(settings.get_int(w['name']))
+            elif w['type'] == 'str':
+                settings.bind(w['name'], widget, 'text',Gio.SettingsBindFlags.DEFAULT)
+                widget.set_value(settings.get_string(w['name']))
+        else:
+            if w.has_key('value'):
+                widget.set_value(w['value'])
         self.__widget_list.append(widget)
-        
+    
     def grid(self, widget_list):
         """
         Build a table of widgets.
@@ -144,6 +163,7 @@ class Dialog(Gtk.Dialog):
         if response_id == Gtk.ResponseType.OK:
             self.response = self.collect_response()
         dialog.hide()
+        
 def main():
     from view import View
     window = Gtk.Window()

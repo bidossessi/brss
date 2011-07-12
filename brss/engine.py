@@ -40,6 +40,7 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 
 from gi.repository import Gtk
+from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gdk
@@ -53,7 +54,7 @@ from Queue      import Queue
 from logger     import Logger
 from functions  import make_time, make_uuid, make_path
 from task       import GeneratorTask
-
+from brss       import BASE_KEY, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 class FeedGetter(threading.Thread):
 #~ class FeedGetter:
     """
@@ -61,10 +62,9 @@ class FeedGetter(threading.Thread):
     """
     def __repr__(self):
         return "FeedGetter"
-    def __init__(self, feed, base_path, max_entries, interval, otf, logger):
+    def __init__(self, feed, base_path, otf, logger):
         self.__otf = otf
-        self.__max_entries = max_entries
-        self.__update_interval = interval
+        self.settings = Gio.Settings.new(BASE_KEY)
         self.favicon_path = os.path.join(base_path, 'favicons')
         self.images_path = os.path.join(base_path, 'images')
         self.feed = feed
@@ -96,7 +96,7 @@ class FeedGetter(threading.Thread):
             return
         if feed.has_key('parse'):
             if not feed['parse']:
-                interval = self.__update_interval*60
+                interval = self.settings.get_int('update-interval')*60
                 now = time.time()
                 elapsed = now - feed['timestamp']
                 self.log.debug("Elapsed: {0}, interval: {1}".format(elapsed, interval))
@@ -130,8 +130,8 @@ class FeedGetter(threading.Thread):
             self.result = feed
             return
         feed['fetched_count'] = limit  = len(f.entries)
-        if feed['fetched_count'] > self.__max_entries:
-            limit = self.__max_entries
+        if feed['fetched_count'] > self.settings.get_int('max-articles'):
+            limit = self.settings.get_int('max-articles')
         if hasattr(f,'bozo_exception'): # Feed HAS a bozo exception...
             for item in bozo_invalid:
                 if item in str(f.bozo_exception):
@@ -277,6 +277,8 @@ class FeedGetter(threading.Thread):
             }
         self.log.debug('Found a new article: {0}'.format(article['id']))
         return article
+
+
 class Engine (dbus.service.Object):
     """ 
     The feed engine provides DBus Feed and Category CRUD services.
@@ -293,7 +295,7 @@ class Engine (dbus.service.Object):
             return
         if item and item.has_key('type') and item['type'] in ['feed', 'category']:
             if item['type'] == 'feed':
-                self.__update_feeds([item], self.__otf)
+                self.__update_feeds([item], self.settings.get_boolean('on-the-fly'))
             elif item['type'] == 'category':
                 self.__add_category(item)
     @dbus.service.method('com.itgears.BRss.Engine')
@@ -356,7 +358,7 @@ class Engine (dbus.service.Object):
         Returns a  list of articles.
         """
         # policy:
-        if bool(self.__hide_read) == True:
+        if self.settings.get_boolean('hide-read'):
             self.log.debug("Fetching unread articles for [Feed] {0}".format(item['name'].encode('utf-8')))
             x = 'AND read = 0'
         else:
@@ -388,35 +390,6 @@ class Engine (dbus.service.Object):
         # check policy first
         return self.__swap_image_tags(article)
 
-    @dbus.service.method('com.itgears.BRss.Engine', out_signature='a{sv}')
-    def get_configs(self):
-        q = 'SELECT key,value FROM config'
-        cursor = self.conn.cursor()
-        cursor.execute(q)
-        rows = cursor.fetchall()
-        cursor.close()
-        confs = {}
-        for r in rows:
-            try:
-                confs[r[0]] = int(r[1])
-            except:
-                confs[r[0]] = r[1]
-        return confs
-
-    @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
-    def set_configs(self, confs):
-        for k,v in confs.iteritems():
-            self.__set_config(k,v)
-        self.notice('info', 'Configuration updated')
-        self.log.debug(confs)
-        # apply configs
-        self.__auto_update = bool(confs.get('auto-update'))
-        self.__set_polling(int(confs.get('interval')))
-        self.__max_entries = int(confs.get('max'))
-        self.__show_notif = bool(confs.get('notify'))
-        self.__otf = bool(confs.get('otf'))
-        self.log.enable_debug(confs.get('debug'))
-
         
     @dbus.service.method('com.itgears.BRss.Engine')
     def export_opml(self, filename):
@@ -434,7 +407,7 @@ class Engine (dbus.service.Object):
             feeds = self.__get_feeds_for(c)
             for f in feeds:
                 opml.writelines('\t\t\t<outline title="{0}" text="{0}" type="rss" xmlUrl="{1}"/>\n'.format(
-                    f['name'].replace('&', '%26').encode('utf-8'),
+                    f['name'].replace('&', '%26'),#.encode('utf-8'),
                     f['url'].replace('&', '%26')))
             opml.writelines('\t\t</outline>\n')
         opml.writelines('\t</body>\n')
@@ -466,7 +439,7 @@ class Engine (dbus.service.Object):
         #ok now create
         for c in cats:
             self.__add_category(c)
-        self.__update_feeds(feeds, self.__otf) # on-the-fly policy
+        self.__update_feeds(feeds, self.settings.get_boolean('on-the-fly')) # on-the-fly policy
         self.notice('ok', 'Feeds imported!')
         self.__update_all()
     
@@ -564,7 +537,7 @@ class Engine (dbus.service.Object):
         self.images_path    = os.path.join(base_path, 'images')
         self.db_path        = os.path.join(base_path, 'brss.db')
         self.conn           = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.log            = Logger(base_path, "brss-engine.log", "BRss-Engine")
+        self.log            = Logger(base_path, "engine.log", "BRss-Engine")
         # check
         try:
             self.__get_all_categories()
@@ -573,38 +546,39 @@ class Engine (dbus.service.Object):
             self.__init_database()
         self.__in_update        = False
         self.__last_update      = time.time()
-        self.__update_interval  = self.__get_config('interval')
-        self.__max_entries      = self.__get_config('max')
-        self.__hide_read        = self.__get_config('hide-read')
-        self.__show_notif       = self.__get_config('notify')
-        self.__otf              = self.__get_config('otf')
-        self.__auto_update      = self.__get_config('auto-update')
+        self.settings = Gio.Settings.new(BASE_KEY)
+        self.settings.connect("changed::update-interval", self.__set_polling)
         self.__added_count      = 0
         self.__deleted_feeds    = []
-        self.log.enable_debug(self.__get_config('debug'))
+        self.timeout_id         = None
+        self.log.enable_debug(self.settings.get_boolean('enable-debug'))
         # d-bus
-        bus_name = dbus.service.BusName('com.itgears.BRss.Engine', bus=dbus.SessionBus())
-        dbus.service.Object.__init__(self, bus_name, '/com/itgears/BRss/Engine')
-        self.__set_polling(self.__get_config('interval'))
+        bus_name = dbus.service.BusName(ENGINE_DBUS_KEY, bus=dbus.SessionBus())
+        dbus.service.Object.__init__(self, bus_name, ENGINE_DBUS_PATH)
+        self.__set_polling(self.settings)
         self.updater = GeneratorTask(
             self.__generator, 
             self.__loop_callback, 
             self.__loop_done)
         # ok, looks like we can start
         Notify.init('BRss')
-        if self.__show_notif:
+        if self.settings.get_boolean('use-notify'):
             self.__notify_startup()
         self.log.debug("Starting {0}".format(self))
         
-    def __set_polling(self, interval):
-        if self.__auto_update:
-            if self.__update_interval != interval:
+    def __set_polling(self, settings, key=None):
+        # GSettings style
+        if settings.get_boolean('auto-update'):
+            if self.timeout_id:
                 self.log.debug("Timeout removed: {0}".format(GLib.source_remove(self.timeout_id)))
-                self.__update_interval = interval
+            interval = settings.get_int('update-interval')
             self.timeout_id = GLib.timeout_add_seconds(
-                    0, interval*60, self.__timed_update, None)
+                    0, 
+                    interval*60, 
+                    self.__timed_update, 
+                    None)
             self.log.debug('New timeout: {0} minutes, id: {1}'.format( interval, self.timeout_id))
-        
+            
     def __repr__(self):
         return "Engine"
     ## Create (*C*RUD)
@@ -653,11 +627,11 @@ class Engine (dbus.service.Object):
             self.conn.commit()
             cursor.close()
             #inser images
-            for img in art['images']:
-                self.__add_image(img)
             self.__added_count += 1
         except AssertionError:
             self.log.debug("article {0} already exists, skipping".format(art['id']))
+        for img in art['images']:
+            self.__add_image(img)
     def __add_image(self, img):
         cursor = self.conn.cursor()
         try:
@@ -667,7 +641,7 @@ class Engine (dbus.service.Object):
                 'INSERT INTO images VALUES(?, ?)', 
                 [
                     img['id'].decode('utf-8'),
-                    img['url'],
+                    img['url'].decode('utf-8'),
                 ]
             )
             self.conn.commit()
@@ -688,7 +662,7 @@ class Engine (dbus.service.Object):
             cursor.close()
         except AssertionError:
             self.log.debug("image {0} already linked to article {1}, skipping".format(
-                img['url'], img['articl_id']))
+                img['url'], img['article_id']))
     def __add_items_for(self, feed):
         if feed and not feed['url'] in self.__deleted_feeds:
             try:
@@ -814,7 +788,7 @@ class Engine (dbus.service.Object):
     def __edit_feed(self, feed):
         try:
             assert self.__item_exists('feeds', 'id', feed['id']) == True
-            # we don't want duplicate feeds
+            # we don't want duplicate feed urls
             assert self.__item_exists('feeds', 'url', feed['url']) == True
             self.log.debug("Editing feed {0}".format(feed['url']))
             # update in database
@@ -852,8 +826,6 @@ class Engine (dbus.service.Object):
             f = FeedGetter(
                 feed, 
                 self.base_path, 
-                self.__max_entries,
-                self.__update_interval,
                 otf,
                 self.log, 
                 )
@@ -863,7 +835,7 @@ class Engine (dbus.service.Object):
     def __loop_callback(self, feed):
         self.fcount += 1
         if feed and feed.has_key('id'):
-            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['id'], self.fcount))
+            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['url'], self.fcount))
             self.__add_items_for(feed)
             self.__update_ended(feed)
         else:
@@ -975,17 +947,18 @@ class Engine (dbus.service.Object):
         rrows = cursor.fetchall()
         rtotal = len(rrows)
         cursor.close()
-        if atotal > self.__max_entries:
+        #~ if atotal > self.__max_entries:
+        if atotal > self.settings.get_int('max-articles'):
             self.log.debug("Cropping feed {0} to the latest {1} unread articles".format(
                     feed['id'],
-                    self.__max_entries))            
+                    self.settings.get_int('max-articles')))            
             # 1. if we have more unread than max_entries, no need to keep the read
-            if utotal > self.__max_entries:
+            if utotal > self.settings.get_int('max-articles'):
                 self.log.debug("Deleting all read articles")
                 for r in rrows:
                     self.__delete_article(r[0])
                 # now delete the excess
-                diff = atotal - rtotal - self.__max_entries # the number of unread articles to delete
+                diff = atotal - rtotal - self.settings.get_int('max-articles')
                 self.log.debug("Deleting {0} excess unread articles".format(diff))
                 for u in urows:
                     if diff > 0:
@@ -993,7 +966,7 @@ class Engine (dbus.service.Object):
                         diff -= 1
             # 2. not that many unread, so remove the excess read
             else:
-                diff = atotal - self.__max_entries # the number of read articles to delete
+                diff = atotal - self.settings.get_int('max-articles')
                 self.log.debug("Deleting {0} excess read articles".format(diff))
                 for r in rrows:
                     if diff > 0:
@@ -1002,25 +975,20 @@ class Engine (dbus.service.Object):
 
     def __update_ended(self, feed):
         if feed:
-            #~ a = self.__count_articles(feed)
-            #~ u = self.__count_unread_articles(feed)
             feed['count'] = self.__count_unread_articles(feed)
             self.updated(feed)
-            #~ self.notice('wait', "{0} updated | {1} articles | {2} unread".format(
-                        #~ feed['name'], 
-                        #~ a, 
-                        #~ u))
         
     def __timed_update(self, *args):
-        self.log.debug("About to auto-update")
-        interval = self.__update_interval*60
-        elapsed = time.time() - self.__last_update
-        if elapsed > interval and not self.__in_update:
-            self.log.debug("Running auto-update")
-            self.__update_all()
-        else:
-            self.log.debug("Not auto-updating")
-        return True
+        if self.settings.get_boolean('auto-update'):
+            self.log.debug("About to auto-update")
+            interval = self.settings.get_int('auto-update')*60
+            elapsed = time.time() - self.__last_update
+            if elapsed > interval and not self.__in_update:
+                self.log.debug("Running auto-update")
+                self.__update_all()
+            else:
+                self.log.debug("Not auto-updating")
+            return True
     
     def __toggle_article(self, col, item):
         """Toggles the state of an article column.
@@ -1101,6 +1069,7 @@ class Engine (dbus.service.Object):
         links = []
         cursor = self.conn.cursor()
         q = 'SELECT p.image_id,i.url FROM images_pool p JOIN images i ON p.image_id = i.id WHERE p.article_id = "{0}"'.format(article['id'].decode('utf-8'))
+        #~ print q
         cursor.execute(q)
         row = cursor.fetchall()
         if (row is not None) and (len(row)>0):
@@ -1157,9 +1126,6 @@ class Engine (dbus.service.Object):
         self.log.info("Initializing database")
         cursor = self.conn.cursor()
         cursor.executescript('''
-            CREATE TABLE config(
-                key varchar(32) PRIMARY KEY, 
-                value varchar(256) NOT NULL);
             CREATE TABLE categories(
                 id varchar(256) PRIMARY KEY, 
                 name varchar(32) NOT NULL);
@@ -1187,21 +1153,13 @@ class Engine (dbus.service.Object):
             CREATE TABLE images(
                 id varchar(256) PRIMARY KEY, 
                 url TEXT NOT NULL);
-            INSERT INTO config VALUES('max', '10');
-            INSERT INTO config VALUES('interval', '60');
-            INSERT INTO config VALUES('hide-read', '0');
-            INSERT INTO config VALUES('otf', '0');
-            INSERT INTO config VALUES('notify', '1');
-            INSERT INTO config VALUES('auto-update', '1');
-            INSERT INTO config VALUES('debug', '1');
-            INSERT INTO categories VALUES('uncategorized', 'Uncategorized');
             ''')
         self.conn.commit()
         cursor.close()
         
     def __notify_startup(self):
         """Send an startup notification with libnotify"""
-        if not self.__show_notif:
+        if not self.settings.get_boolean('use-notify'):
             self.log.debug("Startup Notification suppressed")
         else:
             n = Notify.Notification.new(
@@ -1211,7 +1169,7 @@ class Engine (dbus.service.Object):
             n.show()
 
     def __notify_update(self, c, ac):
-        if not self.__show_notif:
+        if not self.settings.get_boolean('use-notify'):
             self.log.debug("Update Notification suppressed")
         else:
             n = Notify.Notification.new(
@@ -1220,23 +1178,3 @@ class Engine (dbus.service.Object):
                     c, ac, self.__count_unread_articles()),
                 make_path('icons', 'brss-engine.svg'))
             n.show()
-
-    def __get_config(self, key):
-        q = 'SELECT value FROM config WHERE key = "{0}"'.format(key)
-        cursor = self.conn.cursor()
-        cursor.execute(q)
-        row = cursor.fetchone()
-        cursor.close()
-        if row:
-            try:
-                return int(row[0])
-            except ValueError:
-                return row[0]
-        return False
-    
-    def __set_config(self, key, value):
-        q = 'UPDATE config SET value = {0} WHERE key = "{1}"'.format(value, key)
-        cursor = self.conn.cursor()
-        cursor.execute(q)
-        self.conn.commit()
-        cursor.close()

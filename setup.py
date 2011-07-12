@@ -30,10 +30,12 @@ if platform.system() in ('Linux', 'SunOS'):
     applications = glob.glob("brss/applications/*")
     icons = glob.glob("brss/icons/*")
     pixmaps = glob.glob("brss/pixmaps/*")
+    schemas = glob.glob("brss/schemas/*")
     data_files.extend([
         ("/usr/share/applications", applications),
         ("/usr/share/icons", icons),
         ("/usr/share/pixmaps", pixmaps),
+        ("/usr/share/glib-2.0/schemas", schemas),
         ])
 
 setup(

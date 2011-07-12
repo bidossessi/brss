@@ -42,6 +42,7 @@ from alerts         import Alerts
 from dialogs        import Dialog
 from functions      import make_path, make_pixbuf
 from logger         import Logger
+from brss           import BASE_KEY, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 
 class Reader (Gtk.Window, GObject.GObject):
     """
@@ -84,7 +85,7 @@ class Reader (Gtk.Window, GObject.GObject):
         Gtk.Window.__init__(self)
         self.__gobject_init__()
         GObject.type_register(Reader)
-        self.log = Logger(base_path, "brss-reader.log", "BRss-Reader")
+        self.log = Logger(base_path, "reader.log", "BRss-Reader")
 
         # ui elements
         self.tree = Tree(base_path, self.log)
@@ -97,8 +98,8 @@ class Reader (Gtk.Window, GObject.GObject):
         #signals
         self.__connect_signals()
         self.__get_engine()
-        self.__confs = self.get_configs()
-        self.log.enable_debug(self.__confs.get('debug'))
+        self.settings = Gio.Settings.new(BASE_KEY)
+        self.log.enable_debug(self.settings.get_boolean('enable-debug'))
         # ready to go
         self.emit('loaded')
         
@@ -106,28 +107,28 @@ class Reader (Gtk.Window, GObject.GObject):
         # dbus
         bus                 = dbus.SessionBus()
         try:
-            self.engine              = bus.get_object('com.itgears.BRss.Engine', '/com/itgears/BRss/Engine')
+            self.engine              = bus.get_object(ENGINE_DBUS_KEY, ENGINE_DBUS_PATH)
         except:
             self.log.critical("{0}: Couldn't get a DBus connection; quitting.".format(self))
             self.alert.error("Could not connect to Engine", 
             "BRss will now quit.\nPlease make sure that the engine is running and restart the application")
             self.quit()
-        self.create               = self.engine.get_dbus_method('create', 'com.itgears.BRss.Engine')
-        self.edit                = self.engine.get_dbus_method('edit', 'com.itgears.BRss.Engine')
-        self.update              = self.engine.get_dbus_method('update', 'com.itgears.BRss.Engine')
-        self.delete              = self.engine.get_dbus_method('delete', 'com.itgears.BRss.Engine')
-        self.get_menu_items      = self.engine.get_dbus_method('get_menu_items', 'com.itgears.BRss.Engine')
-        self.get_articles_for    = self.engine.get_dbus_method('get_articles_for', 'com.itgears.BRss.Engine')
-        self.search_for          = self.engine.get_dbus_method('search_for', 'com.itgears.BRss.Engine')
-        self.get_article         = self.engine.get_dbus_method('get_article', 'com.itgears.BRss.Engine')
-        self.toggle_starred      = self.engine.get_dbus_method('toggle_starred', 'com.itgears.BRss.Engine')
-        self.toggle_read         = self.engine.get_dbus_method('toggle_read', 'com.itgears.BRss.Engine')
-        self.stop_update         = self.engine.get_dbus_method('stop_update', 'com.itgears.BRss.Engine')
-        self.count_special       = self.engine.get_dbus_method('count_special', 'com.itgears.BRss.Engine')
-        self.get_configs         = self.engine.get_dbus_method('get_configs', 'com.itgears.BRss.Engine')
-        self.set_configs         = self.engine.get_dbus_method('set_configs', 'com.itgears.BRss.Engine')
-        self.import_opml         = self.engine.get_dbus_method('import_opml', 'com.itgears.BRss.Engine')
-        self.export_opml         = self.engine.get_dbus_method('export_opml', 'com.itgears.BRss.Engine')
+        self.create               = self.engine.get_dbus_method('create', ENGINE_DBUS_KEY)
+        self.edit                = self.engine.get_dbus_method('edit', ENGINE_DBUS_KEY)
+        self.update              = self.engine.get_dbus_method('update', ENGINE_DBUS_KEY)
+        self.delete              = self.engine.get_dbus_method('delete', ENGINE_DBUS_KEY)
+        self.get_menu_items      = self.engine.get_dbus_method('get_menu_items', ENGINE_DBUS_KEY)
+        self.get_articles_for    = self.engine.get_dbus_method('get_articles_for', ENGINE_DBUS_KEY)
+        self.search_for          = self.engine.get_dbus_method('search_for', ENGINE_DBUS_KEY)
+        self.get_article         = self.engine.get_dbus_method('get_article', ENGINE_DBUS_KEY)
+        self.toggle_starred      = self.engine.get_dbus_method('toggle_starred', ENGINE_DBUS_KEY)
+        self.toggle_read         = self.engine.get_dbus_method('toggle_read', ENGINE_DBUS_KEY)
+        self.stop_update         = self.engine.get_dbus_method('stop_update', ENGINE_DBUS_KEY)
+        self.count_special       = self.engine.get_dbus_method('count_special', ENGINE_DBUS_KEY)
+        self.get_configs         = self.engine.get_dbus_method('get_configs', ENGINE_DBUS_KEY)
+        self.set_configs         = self.engine.get_dbus_method('set_configs', ENGINE_DBUS_KEY)
+        self.import_opml         = self.engine.get_dbus_method('import_opml', ENGINE_DBUS_KEY)
+        self.export_opml         = self.engine.get_dbus_method('export_opml', ENGINE_DBUS_KEY)
         self.log.warning("Hiding reconnect icon!")
         self.rag.set_visible(False)
         self.ag.set_visible(True)
@@ -192,10 +193,6 @@ class Reader (Gtk.Window, GObject.GObject):
                     <toolitem name='Preferences' action='Preferences'/>
                    </toolbar>
                   </ui>"""
-
-        # Generate a stock image from a file (http://faq.pyGtk.org/index.py?req=show&file=faq08.012.htp)
-
-
 
         self.mag = Gtk.ActionGroup('MenuActions')
         mactions = [
@@ -359,7 +356,7 @@ class Reader (Gtk.Window, GObject.GObject):
                                     self,
                                     Gtk.FileChooserAction.SAVE,
                                     (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                                      Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+                                      Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
 
         dialog.set_default_response(Gtk.ResponseType.OK)
         dialog.set_do_overwrite_confirmation(True)
@@ -425,45 +422,36 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
         if r == Gtk.ResponseType.OK:
             self.__create(item)
-    def __get_confs(self):
-        self.get_configs(
-            reply_handler=self.__set_confs,
-            error_handler=self.__to_log)
-    def __set_confs(self, confs):
-        self.__confs = confs
-        self.log.enable_debug(confs.get('debug'))
 
     def __edit_prefs(self, *args):
-        self.__get_confs()
-        kmap = {'hide-read':'bool', 'interval':'int', 'max':'int', 
-            'notify':'bool', 'otf':'bool', 'debug':'bool', 
-            'auto-update':'bool'}
+        kmap = {
+            'hide-read':'bool', 
+            'update-interval':'int', 
+            'max-articles':'int', 
+            'use-notify':'bool', 
+            'on-the-fly':'bool', 
+            'enable-debug':'bool', 
+            'auto-update':'bool',
+            }
         hmap = {
             'hide-read':'Hide Read Items', 
-            'interval':'Update interval (in minutes)', 
-            'max':'Maximum number of articles to keep (excluding starred)',
+            'update-interval':'Update interval (in minutes)', 
+            'max-articles':'Maximum number of articles to keep (excluding starred)',
             'auto-update':'Allow the engine to download new articles automatically.',
-            'otf':'Start downloading articles for new feeds on-the-fly',
-            'notify':'Show notification on updates',
-            'debug':'Enable detailed logs',
+            'on-the-fly':'Start downloading articles for new feeds on-the-fly',
+            'use-notify':'Show notification on updates',
+            'enable-debug':'Enable detailed logs',
             }
         data = []
-        for k,v in self.__confs.iteritems():
+        for k,v in kmap.iteritems():
             data.append({
-                'type':kmap.get(k),
+                'type':v,
                 'name':k, 
-                'header':hmap.get(k), 
-                'value':v })
-        d = Dialog(self, 'Edit preferences', data)
+                'header':hmap.get(k),#FIXME: can this be gotten from gsettings?
+                })
+        d = Dialog(self, 'Edit preferences', data, self.settings)
         r = d.run()
-        item = d.response
         d.destroy()
-        if r == Gtk.ResponseType.OK:
-            self.log.debug("New configurations: {0}".format(item))
-            self.set_configs(item,
-                reply_handler=self.__to_log,
-                error_handler=self.__to_log)
-        self.__get_confs()
     def __about(self, *args):
         """Shows the about message dialog"""
         from brss import __version__, __maintainers__

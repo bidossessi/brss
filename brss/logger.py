@@ -39,7 +39,7 @@ class Logger:
         self.logger.exception(msg)
 
     def enable_debug(self, d=False):
-        if d:
+        if d == True:
             self.usrlog.setLevel(logging.DEBUG)
         else:
             self.usrlog.setLevel(logging.WARN)

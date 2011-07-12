@@ -210,7 +210,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         else:
            cell.set_property("text",name)
         cell.set_property("weight", self.__get_weight(int(count)))
-        cell.set_property("ellipsize", Pango.EllipsizeMode.END)
+        cell.set_property("ellipsize", Pango.EllipsizeMode.MIDDLE)
     
     def __format_row(self, a):
         gmap = {'feed':'missing', 'category':'gtk-directory'}
