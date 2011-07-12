@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.itgears.BRss" path="/apps/brss/">
+    <key type="i" name="max-articles">
+      <default>10</default>
+      <summary>Number of articles to keep</summary>
+    </key>
+    <key type="i" name="update-interval">
+      <default>60</default>
+      <summary>Update interval (in minutes)</summary>
+    </key>
+    <key type="b" name="hide-read">
+      <default>false</default>
+      <summary>Hide Read Items</summary>
+    </key>
+    <key type="b" name="auto-update">
+      <default>true</default>
+      <summary>Allow the engine to download new articles automatically</summary>
+    </key>
+    <key type="b" name="on-the-fly">
+      <default>true</default>
+      <summary>Start downloading articles for new feeds on-the-fly</summary>
+    </key>
+    <key type="b" name="use-notify">
+      <default>true</default>
+      <summary>Show notification on startup and updates</summary>
+    </key>
+    <key type="b" name="enable-debug">
+      <default>true</default>
+      <summary>Enable detailed logs</summary>
+    </key>
+  </schema>
+</schemalist>

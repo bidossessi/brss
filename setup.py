@@ -69,7 +69,7 @@ setup(
         'console_scripts': ['brss-engine = brss.launcher:run_engine'],
        },
     package_dir = {'brss': 'brss'},
-    #~ package_data = {},
-    #~ include_package_data = True,
+    package_data = {},
+    include_package_data = True,
     data_files = data_files
 )
