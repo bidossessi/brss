@@ -840,7 +840,7 @@ class Engine (dbus.service.Object):
             self.__update_ended(feed)
         else:
             self.log.debug("Empty feed received")
-    def __loop_done(self):
+    def __loop_done(self, *args):
         # count the number of updated feeds if possible
         self.complete(self.fcount)        
         self.__in_update = False

@@ -10,8 +10,9 @@ import threading, thread
 #~ from gi.repository import GLib
 #~ GLib.thread_init(None)
 #TODO: move to GLib Threading
-import gobject
-gobject.threads_init()
+from gi.repository import GObject
+from gi.repository import GLib
+GObject.threads_init()
 
 class GeneratorTask(object):
     
@@ -25,9 +26,9 @@ class GeneratorTask(object):
         for ret in self.generator(*args, **kwargs):
             if self._stopped:
                 break
-            gobject.idle_add(self._loop, ret)
+            GLib.idle_add(0, self._loop, ret)
         if self.complete_callback is not None:
-            gobject.idle_add(self.complete_callback)
+            GLib.idle_add(0, self.complete_callback, None)
 
     def _loop(self, ret):
         if ret is None:

@@ -35,7 +35,7 @@ if platform.system() in ('Linux', 'SunOS'):
         ("/usr/share/applications", applications),
         ("/usr/share/icons", icons),
         ("/usr/share/pixmaps", pixmaps),
-        ("/usr/share/glib-2.0/schemas", schemas),
+        ("/usr/share/glib-2.0/schemas", schemas)
         ])
 
 setup(
@@ -56,14 +56,6 @@ setup(
     author=__maintainers__,
     author_email='bidossessi.sodonon@yahoo.fr',
     zip_safe=False,
-    requires=[
-        'dbus',
-        'sqlite3',
-        'feedparser',
-        'html5lib',
-        'xml',
-        'gi'
-        ],
     entry_points = {
         'gui_scripts': ['brss-reader = brss.launcher:run_frontend'],
         'console_scripts': ['brss-engine = brss.launcher:run_engine'],

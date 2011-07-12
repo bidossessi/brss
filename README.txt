@@ -33,6 +33,19 @@ Reminder: BRss is still "alpha" software.  It works just fine for me,
 but I can't garantee that it won't crash your system, burn down your 
 house or help me achieve world domination. Use at your own risks.
 
+BRss requires the following python modules to run.
+
+python-gobject
+python-feedparser
+python-sqlite3
+python-html5lib
+python-dbus
+
+How to install this modules may vary depending on your distribution.
+In Archlinux run the following command as root:
+
+# pacman -S dbus-python pygobject python2-feedparser python-pysqlite python2-html5lib gtk3 libwebkit3 libnotify
+
 1. Extract the archive
 
 $ tar zxf brss-0.6dev.linux-i686.tar.gz
@@ -42,15 +55,11 @@ $ cd brss
 
 $ sudo python setup.py install
 
-3. Navigate to the schemas folder
-
-$ cd brss/schemas/
-
-4. copy com.itgears.BRss.gschema.xml to /usr/share/glib-2.0/schemas
+3. For some reason, the schema is not copied during installation, so do it manually.
 
 $ sudo cp brss/schemas/com.itgears.BRss.gschema.xml /usr/share/glib-2.0/schemas/
 
-5. Compile the schema folder
+4. Compile the schema folder
 
 $ sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
 
