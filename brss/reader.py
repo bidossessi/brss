@@ -42,7 +42,9 @@ from alerts         import Alerts
 from dialogs        import Dialog
 from functions      import make_path, make_pixbuf
 from logger         import Logger
-from brss           import BASE_KEY, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
+from brss           import BASE_KEY, BASE_PATH
+from brss           import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
+from brss           import READER_DBUS_KEY, READER_DBUS_PATH
 
 class Reader (Gtk.Window, GObject.GObject):
     """
@@ -102,18 +104,23 @@ class Reader (Gtk.Window, GObject.GObject):
         self.log.enable_debug(self.settings.get_boolean('enable-debug'))
         # ready to go
         self.emit('loaded')
+    
+    def __check_engine(self):
+        bus = dbus.SessionBus()
+        try:
+            engine = bus.get_object(ENGINE_DBUS_KEY, ENGINE_DBUS_PATH)
+        except:
+            return False
+        return engine
         
     def __get_engine(self):
-        # dbus
-        bus                 = dbus.SessionBus()
-        try:
-            self.engine              = bus.get_object(ENGINE_DBUS_KEY, ENGINE_DBUS_PATH)
-        except:
+        self.engine = self.__check_engine()
+        if not self.engine:
             self.log.critical("{0}: Couldn't get a DBus connection; quitting.".format(self))
             self.alert.error("Could not connect to Engine", 
-            "BRss will now quit.\nPlease make sure that the engine is running and restart the application")
-            self.quit()
-        self.create               = self.engine.get_dbus_method('create', ENGINE_DBUS_KEY)
+                "BRss will now quit.\nPlease make sure that the engine is running and restart the application")
+            self.quit()            
+        self.create              = self.engine.get_dbus_method('create', ENGINE_DBUS_KEY)
         self.edit                = self.engine.get_dbus_method('edit', ENGINE_DBUS_KEY)
         self.update              = self.engine.get_dbus_method('update', ENGINE_DBUS_KEY)
         self.delete              = self.engine.get_dbus_method('delete', ENGINE_DBUS_KEY)
@@ -646,9 +653,8 @@ class Reader (Gtk.Window, GObject.GObject):
                 #~ item['name'].encode('utf-8')))
     def quit(self, *args):
         self.destroy()
-        Gtk.main_quit()
-    def start(self):
-        Gtk.main()
+    def start(self, *args):
+        self.present()
 
     def do_loaded(self, *args):
         self.log.debug("Starting BRss Reader")
@@ -656,27 +662,65 @@ class Reader (Gtk.Window, GObject.GObject):
         self.status.message('ok', 'Connected to engine')
 
 
-class ReaderService(dbus.service.Object):
-    def __init__(self, base_path):
-        self.app = Reader(base_path)
-        bus_name = dbus.service.BusName('com.itgears.BRss.Reader', bus = dbus.SessionBus())
-        dbus.service.Object.__init__(self, bus_name, '/com/itgears/BRss/Reader')
+class ReaderApplication :
+    """GApplication implementation"""
+    def __init__(self):
+        flags = Gio.ApplicationFlags.FLAGS_NONE
+        key = READER_DBUS_KEY
+        self.app = Gtk.Application.new(key, flags)
+        self.app.register(None)
 
-    @dbus.service.method(dbus_interface='com.itgears.BRss.Reader')
-    def show_window(self):
-        self.app.present()
+    def activate(self, app, *args):
+        self.reader.start()
+        
+    def open(self, app, files, nfiles, hint):
+        print files, nfiles, hint
+    
+    def log_signals(self, *args):
+        print args
+        
+    def check_engine(self):
+        bus = dbus.SessionBus()
+        try:
+            engine = bus.get_object(ENGINE_DBUS_KEY, ENGINE_DBUS_PATH)
+        except:
+            return False
+        return True
 
-def run_reader(base_path):
-    if dbus.SessionBus().request_name('com.itgears.BRss.Reader') != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
-        print "brss-reader already running"
-        method = dbus.SessionBus().get_object('com.itgears.BRss.Reader', '/com/itgears/BRss/Reader').get_dbus_method("show_window")
-        method()
-    else:
-        print "running brss-reader"
-        service = ReaderService(base_path)
-        service.app.start()
+    def run_engine(self):
+        d = make_path('applications', 'brss-engine.desktop')
+        info = Gio.DesktopAppInfo.new_from_filename(d)
+        info.launch((), None)
 
-#~ class ReaderApplication(Gtk.Application):
-    #~ """GApplication implementation"""
-    #~ def __init__(self, base_path):
-        #~ self.reader = Reader(base_path)
+    def find_engine(self):
+        i = 0
+        while i < 3:
+            if self.check_engine():
+                return True
+            i += 1
+            self.run_engine()
+            time.sleep(5)
+        return False
+
+    def run(self):
+        has_engine = self.find_engine()
+        if has_engine:
+            if not self.app.get_is_remote():
+                self.reader = Reader(BASE_PATH)
+                self.app.add_window(self.reader)
+                self.app.connect('activate', self.activate, None)
+                self.app.connect('open', self.open, None)
+                self.app.connect('startup', self.log_signals)
+                self.app.connect('command-line', self.log_signals)
+                self.app.run(None)
+            else:
+                print ("Another instance is already running")
+        else:
+            print ("Could not start engine. Aborting")
+            
+        
+if __name__ == '__main__':
+    home = os.getenv("HOME")
+    BASE_PATH = os.path.join(home,'.config','brss')
+    r = ReaderApplication()
+    r.run()

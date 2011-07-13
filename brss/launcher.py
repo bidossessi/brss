@@ -25,14 +25,11 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-import subprocess
 import os
-import time
-from reader import Reader, run_reader
+from reader import ReaderApplication
 from engine import Engine
+from brss   import BASE_PATH, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 
-home = os.getenv("HOME")
-BASE_PATH = os.path.join(home,'.config','brss')
 def check_path():
     print "Using base_path", BASE_PATH
     if not os.path.exists(BASE_PATH):
@@ -41,10 +38,11 @@ def check_path():
 def check_engine():
     bus = dbus.SessionBus()
     try:
-        bus.get_object('com.itgears.BRss.Engine', '/com/itgears/BRss/Engine')
+        bus.get_object(ENGINE_DBUS_KEY, ENGINE_DBUS_PATH)
     except:
         return False
     return True
+
     
 def run_engine():
     check_path()
@@ -56,15 +54,5 @@ def run_engine():
         engine.start()
 
 def run_frontend():
-    max = 5
-    check_path()
-    if not check_engine():
-        subprocess.Popen(['brss-engine',])
-    i = 0
-    while not check_engine() and i < max:
-        time.sleep(max)
-        i +=1
-    if check_engine():
-        run_reader(BASE_PATH)
-    else:
-        print "Couldn't start engine"
+        r = ReaderApplication()
+        r.run()

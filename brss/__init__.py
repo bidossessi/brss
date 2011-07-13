@@ -21,8 +21,9 @@
 #       MA 02110-1301, USA.
 #       
 #       
+import os
 
-__version__         = '0.6'
+__version__         = '0.7'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]
@@ -30,3 +31,8 @@ __artists__         = ["Bidossessi SODONON"]
 BASE_KEY            = 'com.itgears.BRss'
 ENGINE_DBUS_KEY     = 'com.itgears.BRss.Engine'
 ENGINE_DBUS_PATH    = '/com/itgears/BRss/Engine'
+READER_DBUS_KEY     = 'com.itgears.BRss.Reader'
+READER_DBUS_PATH    = '/com/itgears/BRss/Reader'
+
+home = os.getenv("HOME")
+BASE_PATH           = os.path.join(home,'.config','brss')
