@@ -23,7 +23,7 @@
 #       
 import os
 
-__version__         = '0.7'
+__version__         = '0.8'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]
