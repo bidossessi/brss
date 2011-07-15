@@ -21,11 +21,13 @@
 #       MA 02110-1301, USA.
 #       
 # TODO: 
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GObject
-from gi.repository import Pango
-from functions import make_date
+from gi.repository  import Gtk
+from gi.repository  import Gio
+from gi.repository  import Gdk
+from gi.repository  import GObject
+from gi.repository  import Pango
+from functions      import make_date
+from brss           import BASE_KEY
 
 class ArticleList (Gtk.VBox, GObject.GObject):
     """
@@ -38,6 +40,10 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             None,
             ()),
         "no-data" : (
+            GObject.SignalFlags.RUN_LAST, 
+            None,
+            ()),
+        "filter-ready" : (
             GObject.SignalFlags.RUN_LAST, 
             None,
             ()),
@@ -76,16 +82,9 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         #TODO: break init up 
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
-        self.current_item = None
-        ## search
-        self.filterentry = Gtk.Entry()
-        self.filterentry.set_property("secondary-icon-stock", "gtk-find")
-        self.filterentry.set_property("secondary-icon-activatable", True)
-        self.filterentry.set_property("secondary-icon-tooltip-text", "Search for...")
-        self.filterentry.connect("icon-press", self.__icon_pressed)
-        self.filterentry.connect("activate", self.__request_search)
-        self.fbox = Gtk.HBox(spacing=3)
-        self.fbox.pack_start(self.filterentry, True, True, 0)
+        self.settings = Gio.Settings.new(BASE_KEY)
+        self.current_item   = None
+        self.last_search    = None
         self.lmap = ['id','read','starred','date','title','url', 'weight', 'feed_id']
         self.store = Gtk.ListStore(str, bool, bool, int, str, str, int, str)
         self.listview = Gtk.TreeView()
@@ -156,15 +155,13 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.msc.add(self.listview)
         self.mal = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         self.mal.add(self.msc)
-        self.pack_start(self.fbox, False, False,0)
-        self.pack_start(self.mal, True, True,0)
+        self.pack_end(self.mal, True, True,0)
         self.set_property("width-request", 600)
         menu = ArticleListMenu(self)
         self.current_item = None
         GObject.type_register(ArticleList)
         self.__lock__ = False
         self.listselect.set_select_function(self.__skip_toggles, None)
-        self.fbox.set_no_show_all(True)
         self.search_on = False
     def __repr__(self):
         return "ArticleList"
@@ -228,9 +225,12 @@ class ArticleList (Gtk.VBox, GObject.GObject):
                         if k == 'read':
                             self.store.set_value(iter, self.lmap.index('weight'), self.__get_weight(v))
                 except Exception, e:
-                    self.log.exception(e)
+                    #~ self.log.exception(e)
                     pass # we don't really care about this one 
-        self.emit('row-updated', changed)
+        try:
+            self.emit('row-updated', changed)
+        except Exception, e:
+            self.log.exception(e)
     def __row_activated(self, treeview, path, col):
         item = self.__get_current(treeview.get_selection())
         
@@ -246,28 +246,47 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         else: self.__show_search()
         
     def __show_search(self):
+        ## search
+        self.filterentry = Gtk.Entry()
+        if self.settings.get_boolean('live-search'):
+            self.filterentry.set_property("secondary-icon-stock", "gtk-clear")
+            self.filterentry.connect("changed", self.__request_search)
+        else:
+            self.filterentry.set_property("secondary-icon-stock", "gtk-find")
+            self.filterentry.connect("activate", self.__request_search)
+        self.filterentry.set_property("secondary-icon-activatable", True)
+        self.filterentry.set_property("secondary-icon-tooltip-text", "Clear the search")
+        self.filterentry.connect("icon-press", self.__icon_pressed)            
+        self.fbox = Gtk.HBox(spacing=3)
+        self.fbox.pack_start(self.filterentry, True, True, 0)
+        self.pack_start(self.fbox, False, False,0)
         self.fbox.show()
+        self.__clear_filter()
         self.filterentry.show()
-        self.filterentry.grab_focus()
         self.search_on = True
+        self.emit('filter-ready')
     
     def __hide_search(self):
-        self.fbox.hide()
-        self.__clear_filter()
+        self.filterentry.destroy()
+        self.fbox.destroy()
         self.search_on = False
     
     def __icon_pressed(self, entry, icon_pos, event):
         """Clears the standard filter GtkEntry."""
-        if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":# is that really necessary?
-            if event.button == 1:
-                self.__clear_filter()
+        #~ if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":# is that really necessary?
+            #~ if event.button == 1:
+                #~ self.__clear_filter()
         if icon_pos.value_name == "GTK_ENTRY_ICON_SECONDARY":
             if event.button == 3 or event.button == 1:
-                self.__request_search(entry)
+                if not self.settings.get_boolean('live-search'):
+                    self.__request_search(entry)
+                self.__clear_filter()
     
     def __request_search(self, entry, *args):
-        self.emit('search-requested', entry.get_text())
-        self.__clear_filter()
+        self.last_search = entry.get_text()
+        if len(self.last_search) > 0:
+            self.emit('search-requested', self.last_search)
+        #~ self.__clear_filter()
         
     def __clear_filter(self):
         self.filterentry.set_text("")
@@ -292,6 +311,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             self.emit('no-more-items')
 
     def __select_iter(self, treeview, iter):
+        self.log.debug("{0}: selecting an iter".format(self))
         try:
             model = treeview.get_model()
             sel = treeview.get_selection()
@@ -311,7 +331,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             if value == v:
                 return iter
             iter = model.iter_next(iter)
-    
+        return None
     def __get_current(self, row=False):
         bmap = {False:"0", True:"1"}
         if row:
@@ -392,7 +412,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.emit('dcall-request', callback_name, item)    
     # convenience
     def do_item_selected(self, item):
-        self.log.debug('{0}: Item selected {1}'.format(self, item))
+        self.log.debug('{0}: Item selected {1}'.format(self, item['title']))
     #~ def do_star_toggled(self, item):
         #~ self.log.debug('{0}: Star this {1}'.format(self, item['id']))
     #~ def do_read_toggled(self, item):
@@ -402,16 +422,21 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     #~ def do_no_data(self):
         #~ self.log.debug('{0}: No data found'.format(self))
     def do_list_loaded(self):
-        self.listview.grab_focus()
         self.listselect.connect("changed", self.__selection_changed)
-        #~ self.log.debug("{0}: selecting first item".format(self))
         try:
+            self.log.debug("{0}: selecting current article".format(self))
             iter = self.__search(0, self.current_item['id'])
-        except:
+            if iter:
+                self.__select_iter(self.listview, iter)
+            else:
+                self.__select_first()
+        except Exception,e:
+            self.log.exception(e)
+            self.__select_first()
+    def __select_first(self):
+            self.log.debug("{0}: selecting first article".format(self))
             iter = self.store.get_iter_first()
-        if iter:
             self.__select_iter(self.listview, iter)
-        self.listview.grab_focus()
 
 class ArticleListMenu(Gtk.Menu):
     """

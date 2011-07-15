@@ -26,7 +26,8 @@ from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import Pango
 import os
-from functions import make_path
+from functions     import make_path
+from brss          import BASE_PATH
 
 class Tree (Gtk.VBox, GObject.GObject):
     """ The Tree handles feeds and categories management. """
@@ -50,10 +51,10 @@ class Tree (Gtk.VBox, GObject.GObject):
             (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT,)),
     }
     
-    def __init__(self, base_path, logger):
+    def __init__(self,logger):
         self.log = logger
-        self.favicon_path = os.path.join(base_path, 'favicons')
-        self.images_path = os.path.join(base_path, 'images')
+        self.favicon_path = os.path.join(BASE_PATH, 'favicons')
+        self.images_path = os.path.join(BASE_PATH, 'images')
         Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)

@@ -79,14 +79,15 @@ class Reader (Gtk.Window, GObject.GObject):
 
     def __repr__(self):
         return "Reader"
-    def __init__(self, base_path="."):
+    def __init__(self):
         Gtk.Window.__init__(self)
         self.__gobject_init__()
         GObject.type_register(Reader)
-        self.log = Logger(base_path, "reader.log", "BRss-Reader")
+        self.log = Logger("reader.log", "BRss-Reader")
+        self.settings = Gio.Settings.new(BASE_KEY)
 
         # ui elements
-        self.tree = Tree(base_path, self.log)
+        self.tree = Tree(self.log)
         self.ilist = ArticleList(self.log)
         self.ilist.set_property("height-request", 250)
         self.view = View(self.log)
@@ -96,7 +97,6 @@ class Reader (Gtk.Window, GObject.GObject):
         #signals
         self.__connect_signals()
         self.__get_engine()
-        self.settings = Gio.Settings.new(BASE_KEY)
         self.log.enable_debug(self.settings.get_boolean('enable-debug'))
         # ready to go
         self.emit('loaded')
@@ -300,11 +300,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect('no-data', self.__reset_title)
         self.ilist.connect('star-toggled', self.__toggle_starred)
         self.ilist.connect('read-toggled', self.__toggle_read)
+        self.ilist.connect('filter-ready', self.__connect_accels)
         self.ilist.connect('list_loaded', self.__hide_search,)
         self.ilist.connect_after('row-updated', self.tree.update_starred)
         self.ilist.connect_after('row-updated', self.tree.update_unread)
-        self.ilist.filterentry.connect('focus-in-event', self.__toggle_accels, False)
-        self.ilist.filterentry.connect('focus-out-event', self.__toggle_accels, True)
         self.ilist.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('search-requested', self.__search_articles)
         self.ilist.connect('search-requested', self.tree.deselect)
@@ -436,6 +435,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'on-the-fly':'bool', 
             'enable-debug':'bool', 
             'auto-update':'bool',
+            'live-search':'bool',
             'auto-hide-search':'bool',
             }
         hmap = {
@@ -446,6 +446,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'on-the-fly':'Start downloading articles for new feeds on-the-fly',
             'use-notify':'Show notification on updates',
             'enable-debug':'Enable detailed logs',
+            'live-search':'Return search results as you type',
             'auto-hide-search':'Hide Search form on results',
             }
         data = []
@@ -585,15 +586,20 @@ class Reader (Gtk.Window, GObject.GObject):
     def __toggle_search(self, *args):
         # show ilist if in fullscreen
         self.ilist.toggle_search()
-        if self.is_fullscreen:
-            if self.ilist.search_on:
+        if self.ilist.search_on:
+            if self.is_fullscreen:
                 self.ilist.show()
+        else:
+            if self.is_fullscreen:
+                self.ilist.hide()
             else:
-                self.ilist.hide()            
+                self.ilist.listview.grab_focus()
     def __hide_search(self, *args):
-        w = self.ag.get_action('Find')
-        if w.get_sensitive() and self.settings.get_boolean('auto-hide-search'):
-            w.activate()
+        if not self.settings.get_boolean('live-search'):
+            if self.ilist.search_on and self.settings.get_boolean('auto-hide-search'):
+                w = self.ag.get_action('Find')
+                if w.get_sensitive():
+                    w.activate()
     def __star(self, *args):
         self.ilist.mark_starred()
     def __update_started(self, *args):
@@ -634,11 +640,27 @@ class Reader (Gtk.Window, GObject.GObject):
         clipboard = Gtk.Clipboard()
         clipboard.set_text(link.encode("utf8"), -1)
         clipboard.store()
+    
+    def __connect_accels (self, widget):
+        widget.filterentry.connect('focus-in-event', self.__toggle_accels, False)
+        widget.filterentry.connect('focus-out-event', self.__toggle_accels, True)
+        widget.filterentry.grab_focus()
+
+
     def __toggle_accels(self, widget, event, b):
+        n   = self.ag.get_action('NextArticle')
+        nf  = self.ag.get_action('NextFeed')
+        p   = self.ag.get_action('PreviousArticle')
+        pf  = self.ag.get_action('PreviousFeed')
+        s   = self.ag.get_action('Star')
         if b:
-            self.add_accel_group(self.ui.get_accel_group())
+            self.log.debug("Toggling accels on")
+            for acc in [n, nf, p, pf, s]:
+                acc.connect_accelerator()
         else:
-            self.remove_accel_group(self.ui.get_accel_group())
+            self.log.debug("Toggling accels off")
+            for acc in [n, nf, p, pf, s]:
+                acc.disconnect_accelerator()
 
     def __toggle_fullscreen(self, *args):
         if self.is_fullscreen == True:
@@ -720,7 +742,7 @@ class ReaderApplication :
         has_engine = self.find_engine()
         if has_engine:
             if not self.app.get_is_remote():
-                self.reader = Reader(BASE_PATH)
+                self.reader = Reader()
                 self.app.add_window(self.reader)
                 self.app.connect('activate', self.activate, None)
                 self.app.connect('open', self.open, None)
@@ -732,9 +754,13 @@ class ReaderApplication :
         else:
             print ("Could not start engine. Aborting")
             
-        
-if __name__ == '__main__':
+def main():
     home = os.getenv("HOME")
     BASE_PATH = os.path.join(home,'.config','brss')
+    if not os.path.exists(BASE_PATH):
+        os.makedirs(BASE_PATH)    
     r = ReaderApplication()
     r.run()
+    
+if __name__ == '__main__':
+    main()

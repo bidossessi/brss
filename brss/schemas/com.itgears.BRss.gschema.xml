@@ -13,6 +13,10 @@
       <default>false</default>
       <summary>Hide Read Items</summary>
     </key>
+    <key type="b" name="live-search">
+      <default>false</default>
+      <summary>Return search results as you type</summary>
+    </key>
     <key type="b" name="auto-hide-search">
       <default>false</default>
       <summary>Hide Search form on results</summary>

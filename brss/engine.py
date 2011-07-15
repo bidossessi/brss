@@ -542,7 +542,7 @@ class Engine (dbus.service.Object):
         self.images_path    = os.path.join(BASE_PATH, 'images')
         self.db_path        = os.path.join(BASE_PATH, 'brss.db')
         self.conn           = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.log            = Logger(BASE_PATH, "engine.log", "BRss-Engine")
+        self.log            = Logger("engine.log", "BRss-Engine")
         # check
         try:
             self.__get_all_categories()

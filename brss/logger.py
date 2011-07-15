@@ -3,13 +3,14 @@
 
 import logging
 import os
+from brss       import BASE_PATH
 
 class Logger:
     
-    def __init__(self, base_path=".", path="brss.log", name="BRss", debug=False):
+    def __init__(self, path="brss.log", name="BRss", debug=False):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
-        logpath = os.path.join(base_path, path)
+        logpath = os.path.join(BASE_PATH, path)
         self.usrlog  = logging.FileHandler(logpath, 'w')
         #useful for debugging
         self.console = logging.StreamHandler()
