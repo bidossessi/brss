@@ -13,6 +13,10 @@
       <default>false</default>
       <summary>Hide Read Items</summary>
     </key>
+    <key type="b" name="auto-hide-search">
+      <default>false</default>
+      <summary>Hide Search form on results</summary>
+    </key>
     <key type="b" name="auto-update">
       <default>true</default>
       <summary>Allow the engine to download new articles automatically</summary>

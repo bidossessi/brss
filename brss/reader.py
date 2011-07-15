@@ -55,10 +55,6 @@ class Reader (Gtk.Window, GObject.GObject):
             GObject.SignalFlags.RUN_FIRST, 
             None,
             ()),
-        "search-toggled" : (
-            GObject.SignalFlags.RUN_FIRST, 
-            None,
-            ()),
         "next-article" : (
             GObject.SignalFlags.RUN_FIRST, 
             None,
@@ -248,7 +244,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ui.insert_action_group(self.rag, 1)
         self.ui.add_ui_from_string(ui_string)
         self.add_accel_group(self.ui.get_accel_group())
-
+    
     def __reset_title(self, *args):
         self.set_title('BRss Reader')
     
@@ -294,11 +290,9 @@ class Reader (Gtk.Window, GObject.GObject):
         self.connect('previous-article', self.ilist.previous_item)
         self.connect('next-feed', self.tree.next_item)
         self.connect('previous-feed', self.tree.previous_item)#TODO: implement
-        self.connect('search-toggled', self.ilist.toggle_search)
         self.connect_after('no-engine', self.__no_engine)
         self.connect_after('no-engine', self.view.no_engine)
         self.tree.connect('item-selected', self.__load_articles)
-        #~ self.tree.connect_after('item-selected', self.__feed_selected)
         self.tree.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('item-selected', self.__load_article)
         self.ilist.connect('item-selected', self.__update_title)
@@ -306,8 +300,11 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ilist.connect('no-data', self.__reset_title)
         self.ilist.connect('star-toggled', self.__toggle_starred)
         self.ilist.connect('read-toggled', self.__toggle_read)
+        self.ilist.connect('list_loaded', self.__hide_search,)
         self.ilist.connect_after('row-updated', self.tree.update_starred)
         self.ilist.connect_after('row-updated', self.tree.update_unread)
+        self.ilist.filterentry.connect('focus-in-event', self.__toggle_accels, False)
+        self.ilist.filterentry.connect('focus-out-event', self.__toggle_accels, True)
         self.ilist.connect('dcall-request', self.__handle_dcall)
         self.ilist.connect('search-requested', self.__search_articles)
         self.ilist.connect('search-requested', self.tree.deselect)
@@ -322,7 +319,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.engine.connect_to_signal('updated', self.__handle_updated)
         self.engine.connect_to_signal('updating', self.__update_started)
         self.engine.connect_to_signal('complete', self.__update_done)
-        self.engine.connect_to_signal('complete', self.tree.select_current)
+        #~ self.engine.connect_to_signal('complete', self.tree.select_current)
         # might want to highlight these a bit more
         self.engine.connect_to_signal('warning', self.status.warning)
     
@@ -439,6 +436,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'on-the-fly':'bool', 
             'enable-debug':'bool', 
             'auto-update':'bool',
+            'auto-hide-search':'bool',
             }
         hmap = {
             'hide-read':'Hide Read Items', 
@@ -448,6 +446,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'on-the-fly':'Start downloading articles for new feeds on-the-fly',
             'use-notify':'Show notification on updates',
             'enable-debug':'Enable detailed logs',
+            'auto-hide-search':'Hide Search form on results',
             }
         data = []
         for k,v in kmap.iteritems():
@@ -584,7 +583,17 @@ class Reader (Gtk.Window, GObject.GObject):
         a = self.ag.get_action('Update all')
         a.set_sensitive(gmap.get(b))
     def __toggle_search(self, *args):
-        self.emit('search-toggled')
+        # show ilist if in fullscreen
+        self.ilist.toggle_search()
+        if self.is_fullscreen:
+            if self.ilist.search_on:
+                self.ilist.show()
+            else:
+                self.ilist.hide()            
+    def __hide_search(self, *args):
+        w = self.ag.get_action('Find')
+        if w.get_sensitive() and self.settings.get_boolean('auto-hide-search'):
+            w.activate()
     def __star(self, *args):
         self.ilist.mark_starred()
     def __update_started(self, *args):
@@ -625,6 +634,11 @@ class Reader (Gtk.Window, GObject.GObject):
         clipboard = Gtk.Clipboard()
         clipboard.set_text(link.encode("utf8"), -1)
         clipboard.store()
+    def __toggle_accels(self, widget, event, b):
+        if b:
+            self.add_accel_group(self.ui.get_accel_group())
+        else:
+            self.remove_accel_group(self.ui.get_accel_group())
 
     def __toggle_fullscreen(self, *args):
         if self.is_fullscreen == True:

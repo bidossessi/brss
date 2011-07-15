@@ -21,8 +21,13 @@
 #       MA 02110-1301, USA.
 #       
 #       
-#TODO: Moving configs to gsettings
-#TODO: Moving async code to GIO
+#TODO: Moving async code to GAsyncResult/GAsyncReadyCallback
+# if it's possible to nest async operations, then generator
+# becomes the top async function, with loop_done its callback.
+# Feedgetter can the drop the threading and become an async with
+# loop_callback its... callback.
+#
+#TODO: Use GCancellable to cancel updates
 #TODO: Moving file operation code to GIO
 import time
 import datetime
@@ -55,6 +60,7 @@ from logger     import Logger
 from functions  import make_time, make_uuid, make_path
 from task       import GeneratorTask
 from brss       import BASE_KEY, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
+
 class FeedGetter(threading.Thread):
 #~ class FeedGetter:
     """
@@ -495,10 +501,7 @@ class Engine (dbus.service.Object):
 
     @dbus.service.signal('com.itgears.BRss.Engine', signature='a{sv}')
     def updated(self, item):
-        self.log.debug("updated: [{0}] {1}".format(
-            item['type'].capitalize(), 
-            item['id']))
-
+        pass
     @dbus.service.signal('com.itgears.BRss.Engine')
     def complete(self, c):
         self.notice('ok',"Updated {0} feed(s) | {1} new article(s)".format(c, self.__added_count))
@@ -557,7 +560,7 @@ class Engine (dbus.service.Object):
         dbus.service.Object.__init__(self, bus_name, ENGINE_DBUS_PATH)
         self.__set_polling(self.settings)
         self.updater = GeneratorTask(
-            self.__generator, 
+            self.__loop_generator, 
             self.__loop_callback, 
             self.__loop_done)
         # ok, looks like we can start
@@ -815,14 +818,13 @@ class Engine (dbus.service.Object):
     def __update_category(self, category):
         feeds = self.__get_feeds_for(category)
         self.__update_feeds(feeds)    
-    def __generator(self, flist, otf):
+    def __loop_generator(self, flist, otf):
         self.log.debug("About to update {0} feed(s); otf: {1}".format(len(flist), otf))
         self.fcount = 0
         self.updating(len(flist))
         for feed in flist:
             # let the UI know we're still busy
             name  = feed.get('name') or feed['url']
-            #~ self.notice("wait", "Updating [Feed] {0} ({1})".format(name.encode('utf-8'), self.fcount))
             f = FeedGetter(
                 feed, 
                 self.base_path, 
@@ -835,7 +837,7 @@ class Engine (dbus.service.Object):
     def __loop_callback(self, feed):
         self.fcount += 1
         if feed and feed.has_key('id'):
-            self.notice("wait", "Updating [Feed] {0} ({1})".format(feed['url'], self.fcount))
+            self.log.debug("Inserting [Feed] {0} ({1})".format(feed['url'], self.fcount))
             self.__add_items_for(feed)
             self.__update_ended(feed)
         else:
@@ -976,6 +978,7 @@ class Engine (dbus.service.Object):
     def __update_ended(self, feed):
         if feed:
             feed['count'] = self.__count_unread_articles(feed)
+            self.notice('wait', 'Updated [Feed] {0}'.format(feed['url']))
             self.updated(feed)
         
     def __timed_update(self, *args):

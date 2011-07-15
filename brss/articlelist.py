@@ -402,6 +402,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     #~ def do_no_data(self):
         #~ self.log.debug('{0}: No data found'.format(self))
     def do_list_loaded(self):
+        self.listview.grab_focus()
         self.listselect.connect("changed", self.__selection_changed)
         #~ self.log.debug("{0}: selecting first item".format(self))
         try:
