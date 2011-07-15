@@ -47,10 +47,10 @@ def check_engine():
 def run_engine():
     check_path()
     session_bus = dbus.SessionBus()
-    if session_bus.request_name('com.itgears.BRss.Engine') != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
+    if session_bus.request_name(ENGINE_DBUS_KEY) != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "engine already running"
     else:
-        engine = Engine(BASE_PATH)
+        engine = Engine()
         engine.start()
 
 def run_frontend():

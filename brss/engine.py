@@ -29,6 +29,9 @@
 #
 #TODO: Use GCancellable to cancel updates
 #TODO: Moving file operation code to GIO
+
+#BUG: Gio.File has no creation method (new, new_for_path, new_for_uri, etc) in python on my distro
+
 import time
 import datetime
 import sqlite3
@@ -59,20 +62,20 @@ from Queue      import Queue
 from logger     import Logger
 from functions  import make_time, make_uuid, make_path
 from task       import GeneratorTask
-from brss       import BASE_KEY, ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
+from brss       import BASE_KEY, BASE_PATH
+from brss       import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 
 class FeedGetter(threading.Thread):
-#~ class FeedGetter:
     """
     Encapsulates a feed request
     """
     def __repr__(self):
         return "FeedGetter"
-    def __init__(self, feed, base_path, otf, logger):
+    def __init__(self, feed, otf, logger):
         self.__otf = otf
         self.settings = Gio.Settings.new(BASE_KEY)
-        self.favicon_path = os.path.join(base_path, 'favicons')
-        self.images_path = os.path.join(base_path, 'images')
+        self.favicon_path = os.path.join(BASE_PATH, 'favicons')
+        self.images_path = os.path.join(BASE_PATH, 'images')
         self.feed = feed
         self.result = None
         self.log = logger
@@ -534,13 +537,12 @@ class Engine (dbus.service.Object):
     def __repr__(self):
         return "BRssEngine"
     ## 1. initialization
-    def __init__(self, base_path="."):
-        self.base_path      = base_path
-        self.favicon_path   = os.path.join(base_path, 'favicons')
-        self.images_path    = os.path.join(base_path, 'images')
-        self.db_path        = os.path.join(base_path, 'brss.db')
+    def __init__(self):
+        self.favicon_path   = os.path.join(BASE_PATH, 'favicons')
+        self.images_path    = os.path.join(BASE_PATH, 'images')
+        self.db_path        = os.path.join(BASE_PATH, 'brss.db')
         self.conn           = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.log            = Logger(base_path, "engine.log", "BRss-Engine")
+        self.log            = Logger(BASE_PATH, "engine.log", "BRss-Engine")
         # check
         try:
             self.__get_all_categories()
@@ -827,7 +829,6 @@ class Engine (dbus.service.Object):
             name  = feed.get('name') or feed['url']
             f = FeedGetter(
                 feed, 
-                self.base_path, 
                 otf,
                 self.log, 
                 )
