@@ -26,6 +26,7 @@ from gi.repository import Gdk
 from gi.repository import Gio
 from gi.repository import Pango
 from gi.repository import GObject
+#FIXME: move to Gio.DBusConnexion/DBusProxy
 import dbus
 import dbus.service
 import dbus.mainloop.glib
@@ -755,10 +756,6 @@ class ReaderApplication :
             print ("Could not start engine. Aborting")
             
 def main():
-    home = os.getenv("HOME")
-    BASE_PATH = os.path.join(home,'.config','brss')
-    if not os.path.exists(BASE_PATH):
-        os.makedirs(BASE_PATH)    
     r = ReaderApplication()
     r.run()
     

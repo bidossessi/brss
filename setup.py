@@ -57,8 +57,8 @@ setup(
     author_email='bidossessi.sodonon@yahoo.fr',
     zip_safe=False,
     entry_points = {
-        'gui_scripts': ['brss-reader = brss.launcher:run_frontend'],
-        'console_scripts': ['brss-engine = brss.launcher:run_engine'],
+        'gui_scripts': ['brss-reader = brss.reader:main'],
+        'console_scripts': ['brss-engine = brss.engine:main'],
        },
     package_dir = {'brss': 'brss'},
     package_data = {},

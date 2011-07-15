@@ -47,7 +47,6 @@ import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 
-from gi.repository import Gtk
 from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import GLib
@@ -522,7 +521,7 @@ class Engine (dbus.service.Object):
     ## 6. Runners and stoppers
     @dbus.service.method('com.itgears.BRss.Engine')
     def start(self):
-        Gtk.main()
+        GObject.MainLoop().run()
         self.__update_all()
 
     @dbus.service.method('com.itgears.BRss.Engine')
@@ -530,7 +529,7 @@ class Engine (dbus.service.Object):
         """Clean up and leave"""
         self.__clean_up()
         self.log.debug("Quitting {0}".format(self))
-        Gtk.main_quit()
+        GObject.MainLoop().quit()
         return "Quitting"
     
     #### INTERNAL METHODS  ####
@@ -1182,3 +1181,20 @@ class Engine (dbus.service.Object):
                     c, ac, self.__count_unread_articles()),
                 make_path('icons', 'brss-engine.svg'))
             n.show()
+
+def check_path():
+    print "Using base_path", BASE_PATH
+    if not os.path.exists(BASE_PATH):
+        os.makedirs(BASE_PATH)
+
+def main():
+    check_path()
+    session_bus = dbus.SessionBus()
+    if session_bus.request_name(ENGINE_DBUS_KEY) != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
+        print "engine already running"
+    else:
+        engine = Engine()
+        engine.start()
+
+if __name__ == '__main__':
+	main()
