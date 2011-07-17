@@ -21,9 +21,10 @@
 #       MA 02110-1301, USA.
 #       
 #       
-import os
+from gi.repository import Gio
+from gi.repository import GLib
 
-__version__         = '0.8'
+__version__         = '0.8.1'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]
@@ -33,6 +34,19 @@ ENGINE_DBUS_KEY     = 'com.itgears.BRss.Engine'
 ENGINE_DBUS_PATH    = '/com/itgears/BRss/Engine'
 READER_DBUS_KEY     = 'com.itgears.BRss.Reader'
 READER_DBUS_PATH    = '/com/itgears/BRss/Reader'
+BASE_PATH           = GLib.build_filenamev([GLib.get_user_config_dir(),'brss'])
+FAVICON_PATH        = GLib.build_filenamev([BASE_PATH, 'favicons'])
+IMAGES_PATH         = GLib.build_filenamev([BASE_PATH, 'images'])
+DB_PATH             = GLib.build_filenamev([BASE_PATH, 'brss.db'])
+base_dir            = Gio.file_new_for_path(BASE_PATH)
+favicon_dir         = Gio.file_new_for_path(FAVICON_PATH)
+images_dir          = Gio.file_new_for_path(IMAGES_PATH)
 
-home = os.getenv("HOME")
-BASE_PATH           = os.path.join(home,'.config','brss')
+try:base_dir.make_directory()
+except:pass 
+try:favicon_dir.make_directory()
+except:pass 
+try:images_dir.make_directory()
+except:pass 
+
+# All set

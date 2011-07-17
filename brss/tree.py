@@ -23,11 +23,12 @@
 #       
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import Gio
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Pango
-import os
 from functions     import make_path
-from brss          import BASE_PATH
+from brss          import BASE_PATH, IMAGES_PATH, FAVICON_PATH
 
 class Tree (Gtk.VBox, GObject.GObject):
     """ The Tree handles feeds and categories management. """
@@ -53,9 +54,6 @@ class Tree (Gtk.VBox, GObject.GObject):
     
     def __init__(self,logger):
         self.log = logger
-        self.favicon_path = os.path.join(BASE_PATH, 'favicons')
-        self.images_path = os.path.join(BASE_PATH, 'images')
-        Gtk.VBox.__init__(self, spacing=3)
         self.__gobject_init__()
         GObject.type_register(Tree)
         #store (type,id,name,count,stock-id, url, category_id) 
@@ -126,14 +124,16 @@ class Tree (Gtk.VBox, GObject.GObject):
         self.sview.connect("row-activated", self.__row_activated)
         
     def __setup_icons(self, path, stock_id):
-        if os.path.exists(path) and os.path.getsize(path) and not path in self.__favlist:                
+        icon = Gio.file_new_for_path(path)
+        if icon.query_exists(None) and not icon in self.__favlist:                
             factory = Gtk.IconFactory()
-            s = Gtk.IconSource()
-            s.set_filename(path)
+            s = Gtk.IconSource.new()
+            s.set_filename(icon.get_path())
             iconset = Gtk.IconSet()
             iconset.add_source(s)
             factory.add(stock_id, iconset)
             factory.add_default()
+            self.__favlist.append(icon)
             return True
         return False
 
@@ -217,7 +217,7 @@ class Tree (Gtk.VBox, GObject.GObject):
         gmap = {'feed':'missing', 'category':'gtk-directory'}
         # icon
         try:
-            stock = self.__setup_icons(os.path.join(self.favicon_path, a['id']), a['id'])
+            stock = self.__setup_icons(GLib.build_filenamev([FAVICON_PATH, a['id']]), a['id'])
             if stock:
                 gmap[a['id']] = a['id']
         except Exception, e: 
@@ -336,7 +336,7 @@ class Tree (Gtk.VBox, GObject.GObject):
             if piter:
                 # setup favicon
                 stock_id = self.store.get_value(iter, self.lmap.index('id')) 
-                path = os.path.join(self.favicon_path, stock_id)
+                path = GLib.build_filenamev([FAVICON_PATH, stock_id])
                 if self.__setup_icons(path, stock_id):
                     self.store.set_value(iter, self.lmap.index('stock-id'), stock_id)
                 self.__recount_category(self.store, piter)

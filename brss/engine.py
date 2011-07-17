@@ -34,11 +34,9 @@ import time
 import datetime
 import sqlite3
 import feedparser
-import urllib2
 import threading
 import os
 import re
-import html5lib
 import dbus
 import dbus.service
 import dbus.mainloop.glib
@@ -60,6 +58,7 @@ from logger     import Logger
 from functions  import make_time, make_uuid, make_path
 from task       import GeneratorTask
 from brss       import BASE_KEY, BASE_PATH
+from brss       import DB_PATH, FAVICON_PATH, IMAGES_PATH
 from brss       import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 
 class FeedGetter(threading.Thread):
@@ -71,8 +70,6 @@ class FeedGetter(threading.Thread):
     def __init__(self, feed, otf, logger):
         self.__otf = otf
         self.settings = Gio.Settings.new(BASE_KEY)
-        self.favicon_path = os.path.join(BASE_PATH, 'favicons')
-        self.images_path = os.path.join(BASE_PATH, 'images')
         self.feed = feed
         self.result = None
         self.log = logger
@@ -129,7 +126,7 @@ class FeedGetter(threading.Thread):
             feed['name'] = f.feed.title.encode('utf-8')
         bozo_invalid = ['urlopen', 'Document is empty'] # Custom non-wanted bozos
         t = threading.Thread(target = self.__fetch_remote_favicon, 
-                            args=(self.favicon_path, f.feed, feed, ))
+                            args=(f.feed, feed, ))
         t.start()
         if not hasattr(f, 'entries'):
             self.log.warning( "No entries found in feed {0}".format(feed['name']))
@@ -160,7 +157,7 @@ class FeedGetter(threading.Thread):
                 remote_images = self.__find_images_in_article(article['content'])
                 article['images'] = []
                 for i in remote_images:
-                    self.__fetch_remote_image(self.images_path, i, article)
+                    self.__fetch_remote_image(i, article)
                 feed['articles'].append(article)
         self.log.debug("[Feed] {0} fetched".format(feed['url']))
         self.result = feed
@@ -172,75 +169,85 @@ class FeedGetter(threading.Thread):
         for img in m:
             images.append(img)
         return images
-    def __fetch_remote_image(self, path, src, article):
+    def __fetch_remote_image(self, src, article):
         """Get a article image and write it to a local file."""
         self.log.debug('Fetching remote image {0}'.format(src))
-        if not os.path.exists(path):
-            os.makedirs(path)
         name = make_uuid(src, False) # images with the same url get the same name
-        image = os.path.join(path,name)
-        if os.path.exists(image) and os.path.getsize(image) > 0: # we already have it, don't re-download
-            self.log.debug('Remote image {0} already fetched'.format(src))
+        img = Gio.file_new_for_path(GLib.build_filenamev([IMAGES_PATH,name]))
+        webimg = Gio.file_new_for_uri(src)
+        flags = Gio.FileCopyFlags.NONE
+        if not webimg.query_exists(None):
+            return False # no remote file, don't bother
+        if img.query_exists(None):
+            webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+            inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+            if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
+                self.log.debug('Remote image {0} already fetched'.format(src))
+                article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
+                return True
+            else:
+                flags = Gio.FileCopyFlags.OVERWRITE
+        if web_img.copy(image, flags, None, 
+                    self.__log_progress, src):
             article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
-            return
-        try:
-            web_file = urllib2.urlopen(src, timeout=10)
-            local_file = open(image, 'w')
-            local_file.write(web_file.read())
-            local_file.close()
-            web_file.close()
-            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
-        except Exception, e:
-            print(e)
-        #if the file is empty, remove it
-        if os.path.exists(image) and not os.path.getsize(image):
-            os.unlink(image)
-    def __fetch_remote_favicon(self, path, parsed_feed, feed):
+            return True
+        return False
+    def __fetch_remote_favicon(self, parsed_feed, feed):
         """Find and download remote favicon for a feed."""
-        if not os.path.exists(path):
-            os.makedirs(path)
-        fav = os.path.join(path,feed['id'])
-        if os.path.exists(fav) and os.path.getsize(fav) > 0: # we already have it, don't re-download
-            self.log.debug("Favicon available for {0}".format(feed['name']))
-            return True 
-        #try The naufrago way
-        self.log.debug('Fetching remote favicon for {0}'.format(feed['url']))
-        try:
-            split = feed['url'].split("/")
-            src = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
-            self.log.debug("Trying {0}".format(src))
-            webfile = urllib2.urlopen(src, timeout=10)
-            local_file = open(fav, 'w')
-            local_file.write(webfile.read())
-            local_file.close()
-            webfile.close()
-            print("Favicon found for {0}".format(feed['name']))
-        except Exception, e:
-            print(e)
+        self.log.debug('Fetching favicon for {0}'.format(feed['name']))
+        img = Gio.file_new_for_path(GLib.build_filenamev([FAVICON_PATH,feed['id']]))
+        split = feed['url'].split("/")
+        nsrc = split[0] + '//' + split[1] + split[2] + '/favicon.ico'
+        webimg = Gio.file_new_for_uri(nsrc)
+        flags = Gio.FileCopyFlags.NONE
+        if not webimg.query_exists(None):
             #alternate method
             if parsed_feed.has_key('link'):        
                 url = parsed_feed['link']
-                try:
-                    # grab some html
-                    tmp = html5lib.parse(urllib2.urlopen(url).read())
-                    rgxp = '''http.*?favicon\.ico'''
-                    m = re.findall(rgxp, tmp.toxml(), re.I)
-                    if m:
-                        print("Now Trying {0}".format(m[0]))
-                        webfile = urllib2.urlopen(m[0], timeout=10)
-                        local_file = open(fav, 'w')
-                        local_file.write(webfile.read())
-                        local_file.close()
-                        webfile.close()
-                        print("Favicon found for {0}".format(feed['name']))
-                    else:
-                        print("No favicon available for {0}".format(feed['name']))
-                except Exception, e:
-                    print(e) 
-        #if the file is empty, remove it
-        if os.path.exists(fav) and not os.path.getsize(fav):
-            os.unlink(fav)
-
+                page = Gio.file_new_for_uri(url)
+                dis = Gio.DataInputStream.new(page.read(None))
+                while True:
+                    line, size = dis.read_line(None)
+                    tag = '''<link.*?icon'''
+                    rgxp = '''<link\s+[^>]*?href=["']?([^"'>]+)[^>]*?>'''
+                    lmt = '''head>'''
+                    #~ info = GLib.MatchInfo() #FIXME: MemoryError
+                    #~ link = GLib.RegEx(tag) #FIXME: MemoryError                    
+                    #~ if link.match(line):
+                        #~ href = GLib.RegEx(rgxp)#FIXME: MemoryError
+                        #~ if href.match(line, 0, info):
+                            #~ nsrc = info.fetch(0)
+                            #~ webimg = Gio.file_new_for_uri(nsrc)
+                            #~ info.free()
+                            #~ link.free()
+                            #~ href.free()
+                    if re.match(tag, line):
+                        m = re.findall(rgxp, line, re.I)
+                        if m:
+                            webimg = Gio.file_new_for_uri(m[0])
+                        break
+                    if re.match(lmt, line):break # don't go beyond <head/>
+                dis.free()
+                page.free()
+            if not webimg.query_exists(None):
+                self.log.debug("No favicon available for {0}".format(feed['name']))
+                return False # don't bother
+        if img.query_exists(None):
+            webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+            inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+            if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
+                self.log.debug('Remote image {0} already fetched'.format(src))
+                article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
+                return True
+            else:
+                flags = Gio.FileCopyFlags.OVERWRITE
+        if web_img.copy(image, flags, None, 
+                    self.__log_progress, src):
+            self.log.debug("Favicon found for {0}".format(feed['name']))
+            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
+            return True
+        self.log.debug("No favicon available for {0}".format(feed['name']))
+        return False
     def __check_feed_item(self, feed_item):
         """
         Pre-format a feed article for database insertion.
@@ -284,7 +291,10 @@ class FeedGetter(threading.Thread):
         self.log.debug('Found a new article: {0}'.format(article['id']))
         return article
 
-
+    def __log_progress(size, total, name):
+        perc = (size/total)*100
+        self.log.debug("Getting {0}: {1}%".format(name, perc))
+        
 class Engine (dbus.service.Object):
     """ 
     The feed engine provides DBus Feed and Category CRUD services.
@@ -400,26 +410,30 @@ class Engine (dbus.service.Object):
     @dbus.service.method('com.itgears.BRss.Engine')
     def export_opml(self, filename):
         """Export feeds and categories to an OPML file."""
-        opml = open(os.path.abspath(filename), 'w')
-        opml.writelines('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
-        opml.writelines('<opml version="1.0">\n')
-        opml.writelines('\t<title>BRss Feed List</title>\n')
-        opml.writelines('\t<head></head>\n')
-        opml.writelines('\t<body>\n')
+        opml = Gio.file_new_for_path(filename)
+        fos = opml.create(Gio.FileCreateFlags.NONE, None, None)
+        dos = Gio.DataOutputStream(fos)
+        dos.put_string('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', None, None)
+        dos.put_string('<opml version="1.0">\n', None, None)
+        dos.put_string('\t<title>BRss Feed List</title>\n', None, None)
+        dos.put_string('\t<head></head>\n', None, None)
+        dos.put_string('\t<body>\n', None, None)
         cats = self.__get_all_categories()
         for c in cats:
-            opml.writelines('\t\t<outline title="{0}" text="{0}" description="{0}" type="folder">\n'.format(
-                c['name']))
+            dos.put_string('\t\t<outline title="{0}" text="{0}" description="{0}" type="folder">\n'.format(
+                c['name']), None, None)
             feeds = self.__get_feeds_for(c)
             for f in feeds:
-                opml.writelines('\t\t\t<outline title="{0}" text="{0}" type="rss" xmlUrl="{1}"/>\n'.format(
+                dos.put_string('\t\t\t<outline title="{0}" text="{0}" type="rss" xmlUrl="{1}"/>\n'.format(
                     f['name'].replace('&', '%26'),#.encode('utf-8'),
-                    f['url'].replace('&', '%26')))
-            opml.writelines('\t\t</outline>\n')
-        opml.writelines('\t</body>\n')
-        opml.writelines('</opml>\n')
-        opml.flush()
-        opml.close()
+                    f['url'].replace('&', '%26')), None, None)
+            dos.put_string('\t\t</outline>\n', None, None)
+        dos.put_string('\t</body>\n', None, None)
+        dos.put_string('</opml>\n', None, None)
+        fos.flush()
+        fos.close()
+        fos.free()
+        
 
     @dbus.service.method('com.itgears.BRss.Engine')
     def import_opml(self, filename):
@@ -535,10 +549,7 @@ class Engine (dbus.service.Object):
         return "BRssEngine"
     ## 1. initialization
     def __init__(self):
-        self.favicon_path   = os.path.join(BASE_PATH, 'favicons')
-        self.images_path    = os.path.join(BASE_PATH, 'images')
-        self.db_path        = os.path.join(BASE_PATH, 'brss.db')
-        self.conn           = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn           = sqlite3.connect(DB_PATH, check_same_thread=False)
         self.log            = Logger("engine.log", "BRss-Engine")
         # check
         try:
@@ -870,7 +881,8 @@ class Engine (dbus.service.Object):
                 self.__delete_article(a['id'])
         # now delete
         try:
-            os.unlink(os.path.join(self.favicon_path,feed['id']))
+            favicon = Gio.file_new_for_path(GLib.build_filenamev([FAVICON_PATH,feed['id']]))
+            favicon.delete()
         except Exception, e: # not there?
             self.log.exception(e) 
         q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
@@ -906,10 +918,10 @@ class Engine (dbus.service.Object):
                 cursor.execute(q)
                 c = cursor.fetchone()
                 if c and c[0] == 1:
-                    filename = os.path.join(self.images_path,i[0])
-                    self.log.debug("No more reference to image {0}, deleting from filesystem".format(filename))
+                    img = Gio.file_new_for_path(GLib.build_filenamev([IMAGES_PATH,i[0]]))
+                    self.log.debug("No more reference to image {0}, deleting from filesystem".format(img.get_path()))
                     try:
-                        os.unlink(filename)
+                        img.delete()
                         # now remove image entry
                         q = 'DELETE FROM images WHERE id = "{0}"'.format(i[0])
                         cursor.execute(q)
@@ -1075,11 +1087,11 @@ class Engine (dbus.service.Object):
         row = cursor.fetchall()
         if (row is not None) and (len(row)>0):
             self.log.debug("Swapping image tags for [Article] {0}".format(article['id']))
-            for img in row:
-                t = 'file://' + os.path.join(self.images_path, str(img[0]))
+            for i in row:
+                img = Gio.file_new_for_path(GLib.build_filenamev([IMAGES_PATH, str(i[0])]))
                 article['content'] = article['content'].replace(
-                        img[1], t)
-                links.append(t)
+                        i[1], img.get_uri())
+                links.append(img.get_uri())
             return article, links
         else:
             return article, ['valid']
@@ -1181,13 +1193,7 @@ class Engine (dbus.service.Object):
                 make_path('icons', 'brss-engine.svg'))
             n.show()
 
-def check_path():
-    print "Using base_path", BASE_PATH
-    if not os.path.exists(BASE_PATH):
-        os.makedirs(BASE_PATH)
-
 def main():
-    check_path()
     session_bus = dbus.SessionBus()
     if session_bus.request_name(ENGINE_DBUS_KEY) != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "engine already running"

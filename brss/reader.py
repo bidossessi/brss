@@ -31,7 +31,6 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-import os
 import subprocess
 import time
 # our stuff
@@ -158,6 +157,7 @@ class Reader (Gtk.Window, GObject.GObject):
                      <menuitem action='Find'/>
                      <separator/>
                      <menuitem action='Star'/>
+                     <menuitem action='Read'/>
                      <separator/>
                      <menuitem action='Preferences'/>
                     </menu>
@@ -218,6 +218,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 ('Quit', "gtk-quit", '_Quit', '<control>Q', 'Quits', self.quit),
                 ('Edit', "gtk-edit", '_Edit', '<control>E', 'Edit the selected element'),
                 ('Star', "gtk-about", '_Star', 'x', 'Star the current article', self.__star),
+                ('Read', "gtk-ok", '_Read', 'r', 'Toggle the current article read status', self.__read),
                 ('Preferences', "gtk-preferences", '_Preferences', '<control>P', 'Configure the engine', self.__edit_prefs),
                 ('Update', None, '_Update', '<control>U', 'Update the selected feed', self.__update_feed),
                 ('Update all', "gtk-refresh", 'Update all', '<control>R', 'Update all feeds', self.__update_all),
@@ -345,7 +346,7 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog.add_filter(filter)
 
         response = dialog.run()
-        filename = os.path.abspath(dialog.get_filename())
+        filename = dialog.get_filename()
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
@@ -372,7 +373,7 @@ class Reader (Gtk.Window, GObject.GObject):
         dialog.add_filter(filter)
 
         response = dialog.run()
-        filename = os.path.abspath(dialog.get_filename())
+        filename = dialog.get_filename()
         dialog.destroy()
         
         if response == Gtk.ResponseType.OK:
@@ -603,6 +604,8 @@ class Reader (Gtk.Window, GObject.GObject):
                     w.activate()
     def __star(self, *args):
         self.ilist.mark_starred()
+    def __read(self, *args):
+        self.ilist.toggle_read()
     def __update_started(self, *args):
         self.log.debug("Toggling update status to True")
         self.__toggle_in_update(True)
@@ -654,13 +657,14 @@ class Reader (Gtk.Window, GObject.GObject):
         p   = self.ag.get_action('PreviousArticle')
         pf  = self.ag.get_action('PreviousFeed')
         s   = self.ag.get_action('Star')
+        r   = self.ag.get_action('Read')
         if b:
             self.log.debug("Toggling accels on")
-            for acc in [n, nf, p, pf, s]:
+            for acc in [n, nf, p, pf, s, r]:
                 acc.connect_accelerator()
         else:
             self.log.debug("Toggling accels off")
-            for acc in [n, nf, p, pf, s]:
+            for acc in [n, nf, p, pf, s, r]:
                 acc.disconnect_accelerator()
 
     def __toggle_fullscreen(self, *args):

@@ -387,6 +387,15 @@ class ArticleList (Gtk.VBox, GObject.GObject):
             item['read'] = False # forcing it
             self.emit('read-toggled', item)
 
+    def toggle_read(self, *args):
+        """Mark the current article as read."""
+        (model, iter) = self.listselect.get_selected()
+        if iter:
+            path = model.get_path(iter)
+            item = self.__get_current(model[path])
+            #~ item['starred'] = False # forcing it
+            self.emit('read-toggled', item)
+
     def mark_starred(self, *args):
         """Mark the current article as read."""
         (model, iter) = self.listselect.get_selected()

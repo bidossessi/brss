@@ -24,11 +24,11 @@
 
 from pkg_resources import resource_filename
 from datetime import date, datetime
-import os
 import locale
 import hashlib
 import time
 from gi.repository import GdkPixbuf
+from gi.repository import GLib
 
 def make_date(string):
     date = datetime.fromtimestamp(int(string))
@@ -36,7 +36,7 @@ def make_date(string):
 
 def make_path(type, filename):
     """Return a data opml path"""
-    return resource_filename("brss", os.path.join(type,filename))
+    return resource_filename("brss", GLib.build_filenamev([type,filename]))
 
 def make_time():
     split = str(datetime.now()).split(' ')
@@ -53,11 +53,7 @@ def make_pixbuf(name='brss', size=128):
     return GdkPixbuf.Pixbuf.new_from_file_at_size(
         get_pixmap("{0}.svg".format(name)), size, size)
 
-#~ def make_pixbuf(name='brss'):
-    #~ return GdkPixbuf.Pixbuf.new_from_file(
-        #~ get_pixmap("{0}.svg".format(name)))
-
 def make_uuid(data="fast random string", add_time=True):
-    if add_time:#make it REALLY unique
+    if add_time: #make it REALLY unique
         data = str(make_time())+str(data)
     return hashlib.md5(data).hexdigest().encode("utf-8")

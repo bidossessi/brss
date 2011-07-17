@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
+from gi.repository import GLib
 import logging
-import os
 from brss       import BASE_PATH
 
 class Logger:
@@ -10,7 +10,7 @@ class Logger:
     def __init__(self, path="brss.log", name="BRss", debug=False):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
-        logpath = os.path.join(BASE_PATH, path)
+        logpath = GLib.build_filenamev([BASE_PATH, path])
         self.usrlog  = logging.FileHandler(logpath, 'w')
         #useful for debugging
         self.console = logging.StreamHandler()
