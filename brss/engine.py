@@ -30,8 +30,6 @@
 #TODO: Use GCancellable to cancel updates
 #TODO: Moving file operation code to GIO
 
-#BUG: Gio.File has no creation method (new, new_for_path, new_for_uri, etc) in python on my distro
-
 import time
 import datetime
 import sqlite3
@@ -1156,6 +1154,7 @@ class Engine (dbus.service.Object):
             CREATE TABLE images(
                 id varchar(256) PRIMARY KEY, 
                 url TEXT NOT NULL);
+            INSERT INTO categories(id,name) VALUES('uncategorized','Uncategorized');
             ''')
         self.conn.commit()
         cursor.close()
