@@ -85,6 +85,7 @@ class Reader (Gtk.Window, GObject.GObject):
         GObject.type_register(Reader)
         self.log = Logger("reader.log", "BRss-Reader")
         self.settings = Gio.Settings.new(BASE_KEY)
+        self.settings.connect("changed::show-status", self.__toggle_status)
 
         # ui elements
         self.tree = Tree(self.log)
@@ -280,10 +281,11 @@ class Reader (Gtk.Window, GObject.GObject):
         self.is_fullscreen = False
         self.__reset_title()
         self.set_icon_from_file(make_path('icons','brss.svg'))
-        #~ self.set_default_icon(get_pixbuf())
         self.alert = Alerts(self)
         self.connect("destroy", self.quit)
         self.show_all()
+        if not self.settings.get_boolean('show-status'):
+            self.status.hide()
         
 
     def __connect_signals(self):    # signals
@@ -320,7 +322,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.engine.connect_to_signal('updated', self.__handle_updated)
         self.engine.connect_to_signal('updating', self.__update_started)
         self.engine.connect_to_signal('complete', self.__update_done)
-        #~ self.engine.connect_to_signal('complete', self.tree.select_current)
+        self.engine.connect_to_signal('complete', self.tree.select_current)
         # might want to highlight these a bit more
         self.engine.connect_to_signal('warning', self.status.warning)
     
@@ -351,7 +353,6 @@ class Reader (Gtk.Window, GObject.GObject):
 
         if response == Gtk.ResponseType.OK:
             self.log.debug("{0}: Trying to import from OPML file {1}".format(self, filename))
-            self.status.message("wait", "Importing Feeds")
             self.import_opml(filename, 
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
@@ -439,6 +440,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'auto-update':'bool',
             'live-search':'bool',
             'auto-hide-search':'bool',
+            'show-status':'bool',
             }
         hmap = {
             'hide-read':'Hide Read Items', 
@@ -450,6 +452,7 @@ class Reader (Gtk.Window, GObject.GObject):
             'enable-debug':'Enable detailed logs',
             'live-search':'Return search results as you type',
             'auto-hide-search':'Hide Search form on results',
+            'show-status':'Show the bottom status bar',
             }
         data = []
         for k,v in kmap.iteritems():
@@ -667,6 +670,13 @@ class Reader (Gtk.Window, GObject.GObject):
             for acc in [n, nf, p, pf, s, r]:
                 acc.disconnect_accelerator()
 
+    def __toggle_status(self, settings, key=None):
+        if settings.get_boolean(key):
+            self.log.debug('{0}: showing the status bar'.format(self))
+            self.status.show()
+        else:
+            self.log.debug('{0}: hiding the status bar'.format(self))
+            self.status.hide()
     def __toggle_fullscreen(self, *args):
         if self.is_fullscreen == True:
             self.ilist.show()

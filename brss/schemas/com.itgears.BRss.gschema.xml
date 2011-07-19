@@ -37,5 +37,9 @@
       <default>true</default>
       <summary>Enable detailed logs</summary>
     </key>
+    <key type="b" name="show-status">
+      <default>true</default>
+      <summary>Show the bottom status bar</summary>
+    </key>
   </schema>
 </schemalist>
