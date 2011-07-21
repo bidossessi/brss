@@ -28,12 +28,12 @@ from brss import __version__, __maintainers__
 data_files = []
 if platform.system() in ('Linux', 'SunOS'):
     applications = glob.glob("brss/applications/*")
-    icons = glob.glob("brss/icons/*")
+    icons = glob.glob("brss/icons/hicolor/*")
     pixmaps = glob.glob("brss/pixmaps/*")
     schemas = glob.glob("brss/schemas/*")
     data_files.extend([
         ("/usr/share/applications", applications),
-        ("/usr/share/icons", icons),
+        ("/usr/share/icons/hicolor", icons),
         ("/usr/share/pixmaps", pixmaps),
         ("/usr/share/glib-2.0/schemas", schemas)
         ])
