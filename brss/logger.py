@@ -12,7 +12,7 @@ class Logger:
         self.logger.setLevel(logging.DEBUG)
         logpath = GLib.build_filenamev([BASE_PATH, path])
         self.usrlog  = logging.FileHandler(logpath, 'w')
-        #useful for debugging
+        # useful for debugging
         self.console = logging.StreamHandler()
         self.console.setLevel(logging.DEBUG)
         self.usrlog.setLevel(logging.WARN)

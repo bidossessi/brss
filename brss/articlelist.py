@@ -273,9 +273,6 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     
     def __icon_pressed(self, entry, icon_pos, event):
         """Clears the standard filter GtkEntry."""
-        #~ if icon_pos.value_name == "GTK_ENTRY_ICON_PRIMARY":# is that really necessary?
-            #~ if event.button == 1:
-                #~ self.__clear_filter()
         if icon_pos.value_name == "GTK_ENTRY_ICON_SECONDARY":
             if event.button == 3 or event.button == 1:
                 if not self.settings.get_boolean('live-search'):
@@ -286,7 +283,6 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.last_search = entry.get_text()
         if len(self.last_search) > 0:
             self.emit('search-requested', self.last_search)
-        #~ self.__clear_filter()
         
     def __clear_filter(self):
         self.filterentry.set_text("")
@@ -361,15 +357,10 @@ class ArticleList (Gtk.VBox, GObject.GObject):
     
     def __toggle_star(self, cell, path, model):
         self.__lock__ = True
-        #~ bmap = {True:False, False:True}
-        #~ model[path][2] = bmap.get(model[path][2])#FIXME: not my job!
         self.emit('star-toggled', self.__get_current(model[path]))
     
     def __toggle_read(self, cell, path, model):
         self.__lock__ = True
-        #~ bmap = {True:False, False:True}
-        #~ model[path][1] = bmap.get(model[path][1])#FIXME: not my job!
-        #~ model[path][6] = self.__get_weight(model[path][1])
         self.emit('read-toggled', self.__get_current(model[path]))
     
     def __skip_toggles(self, selection, *args):
@@ -419,7 +410,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
 
     def run_dcall(self, callback_name, item):
         self.emit('dcall-request', callback_name, item)    
-    # convenience
+    # closure
     def do_item_selected(self, item):
         self.log.debug('{0}: Item selected {1}'.format(self, item['title']))
     #~ def do_star_toggled(self, item):
@@ -461,33 +452,24 @@ class ArticleListMenu(Gtk.Menu):
         self._treeview.connect('button-release-event', self._on_event)
         self._treeview.connect('key-release-event', self._on_event)
         self._treeview.connect('item-selected', self._monitor_instance)
-
     def clean(self):
         for child in self.get_children():
             self.remove(child)
         for menuitem, signal_id in self._signal_ids:
             menuitem.disconnect(signal_id)
         self._signal_ids = []
-
     def popup(self, event, instance):
         #~ print("{0}: menu popping up, dirty {1}".format(self, self._dirty))
         self._create(instance)
         if hasattr(event, "button"):
             Gtk.Menu.popup(self, None, None, None, None,
                        event.button, event.time)
-        #~ elif hasattr(event, "keyval"):
-            #~ Gtk.Menu.popup(self, None, None, None, None,
-                       #~ event.keyval, event.time)
-
     def _create(self, item):
         if not self._dirty:
             return
-
         self.clean()
-
         for i in ['Mark all as read', 'Open in Browser', 
             'Copy Url to Clipboard']:
-            
             menuitem = Gtk.MenuItem()
             menuitem.set_label(i)
             signal_id = menuitem.connect("activate",
@@ -497,16 +479,13 @@ class ArticleListMenu(Gtk.Menu):
             self._signal_ids.append((menuitem, signal_id))
             menuitem.show()
             self.append(menuitem)
-        
         self._dirty = False
-
     def _on_menuitem__activate(self, menuitem, callname, item):
         # switch dialog or direct call
         if callname in ['Edit', 'Add a Category', 'Add a Feed']:
             self._treeview.run_dialog(callname, item)
         elif callname in ['Open in Browser', 'Copy Url to Clipboard']:
             self._treeview.run_dcall(callname, item)
-
     def _on_event(self, treeview, event):
         """Respond to mouse click or key press events in a GtkTree."""
         if event.type == Gdk.EventType.BUTTON_RELEASE:
@@ -515,6 +494,5 @@ class ArticleListMenu(Gtk.Menu):
         elif event.type == Gdk.EventType.KEY_RELEASE:
             if event.keyval == 65383: # Menu
                 self.popup(event, self._treeview.current_item)
-
     def _monitor_instance(self, treeview, item):
         self._dirty = True

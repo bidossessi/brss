@@ -178,20 +178,24 @@ class FeedGetter(threading.Thread):
         flags = Gio.FileCopyFlags.NONE
         if not webimg.query_exists(None):
             return False # no remote file, don't bother
-        if img.query_exists(None):
-            webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
-            inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
-            if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
-                self.log.debug('Remote image {0} already fetched'.format(src))
+        try:
+            if img.query_exists(None):
+                webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+                inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+                if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
+                    self.log.debug('Remote image {0} already fetched'.format(src))
+                    article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
+                    return True
+                else:
+                    flags = Gio.FileCopyFlags.OVERWRITE
+            if webimg.copy(img, flags, None, 
+                        self.__log_progress, src):
                 article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
                 return True
-            else:
-                flags = Gio.FileCopyFlags.OVERWRITE
-        if web_img.copy(image, flags, None, 
-                    self.__log_progress, src):
-            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
-            return True
-        return False
+            return False
+        except Exception, e:
+            self.log.exception(e)
+            return False
     def __fetch_remote_favicon(self, parsed_feed, feed):
         """Find and download remote favicon for a feed."""
         self.log.debug('Fetching favicon for {0}'.format(feed['name']))
@@ -213,14 +217,14 @@ class FeedGetter(threading.Thread):
                     lmt = '''head>'''
                     #~ info = GLib.MatchInfo() #FIXME: MemoryError
                     #~ link = GLib.RegEx(tag) #FIXME: MemoryError                    
-                    #~ if link.match(line):
+                    #~ if link.match(line):#FIXME: MemoryError
                         #~ href = GLib.RegEx(rgxp)#FIXME: MemoryError
-                        #~ if href.match(line, 0, info):
-                            #~ nsrc = info.fetch(0)
-                            #~ webimg = Gio.file_new_for_uri(nsrc)
-                            #~ info.free()
-                            #~ link.free()
-                            #~ href.free()
+                        #~ if href.match(line, 0, info):#FIXME: MemoryError
+                            #~ nsrc = info.fetch(0)#FIXME: MemoryError
+                            #~ webimg = Gio.file_new_for_uri(nsrc)#FIXME: MemoryError
+                            #~ info.free()#FIXME: MemoryError
+                            #~ link.free()#FIXME: MemoryError
+                            #~ href.free()#FIXME: MemoryError
                     if re.match(tag, line):
                         m = re.findall(rgxp, line, re.I)
                         if m:
@@ -232,22 +236,24 @@ class FeedGetter(threading.Thread):
             if not webimg.query_exists(None):
                 self.log.debug("No favicon available for {0}".format(feed['name']))
                 return False # don't bother
-        if img.query_exists(None):
-            webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
-            inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
-            if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
-                self.log.debug('Remote image {0} already fetched'.format(src))
-                article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
+        try:
+            if img.query_exists(None):
+                webinf = webimg.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+                inf = img.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+                if inf.get_size() == webinf.get_size(): # we already have it, don't re-download
+                    self.log.debug('Remote image {0} already fetched'.format(nsrc))
+                    return True
+                else:
+                    flags = Gio.FileCopyFlags.OVERWRITE
+            if webimg.copy(img, flags, None, 
+                        self.__log_progress, nsrc):
+                self.log.debug("Favicon found for {0}".format(feed['name']))
                 return True
-            else:
-                flags = Gio.FileCopyFlags.OVERWRITE
-        if web_img.copy(image, flags, None, 
-                    self.__log_progress, src):
-            self.log.debug("Favicon found for {0}".format(feed['name']))
-            article['images'].append({'id':name, 'url':src, 'article_id':article['id']})
-            return True
-        self.log.debug("No favicon available for {0}".format(feed['name']))
-        return False
+            self.log.debug("No favicon available for {0}".format(feed['name']))
+            return False
+        except Exception, e:
+            self.log.exception(e)
+            return False
     def __check_feed_item(self, feed_item):
         """
         Pre-format a feed article for database insertion.
@@ -291,7 +297,7 @@ class FeedGetter(threading.Thread):
         self.log.debug('Found a new article: {0}'.format(article['id']))
         return article
 
-    def __log_progress(size, total, name):
+    def __log_progress(self, size, total, name):
         perc = (size/total)*100
         self.log.debug("Getting {0}: {1}%".format(name, perc))
         
@@ -843,7 +849,7 @@ class Engine (dbus.service.Object):
             f.start()
             f.join()
             yield f.get_result()
-    def __loop_callback(self, feed):
+    def __loop_callback(self, feed=None):
         self.fcount += 1
         if feed and feed.has_key('id'):
             self.log.debug("Inserting [Feed] {0} ({1})".format(feed['url'], self.fcount))

@@ -38,17 +38,16 @@ BRss requires the following python modules to run.
 python-gobject
 python-feedparser
 python-sqlite3
-python-html5lib
 python-dbus
 
 How to install this modules may vary depending on your distribution.
 In Archlinux run the following command as root:
 
-# pacman -S dbus-python pygobject python2-feedparser python-pysqlite python2-html5lib gtk3 libwebkit3 libnotify
+# pacman -S dbus-python pygobject python2-feedparser python-pysqlite gtk3 libwebkit3 libnotify
 
 1. Extract the archive
 
-$ tar zxf brss-0.6dev.linux-i686.tar.gz
+$ tar zxf brss-0.8.1dev.tar.gz
 $ cd brss
 
 2. Install
@@ -69,7 +68,6 @@ TODO:
 The following are planned, in no particular order:
 
     - Provide a proper install script.
-    - Move database handling to SQLAlchemy
     - Localization
     - Documentation
     - Gnome3 design guidelines compliance
