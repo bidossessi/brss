@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+ #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
 #       dialogs.py
@@ -95,10 +95,6 @@ class Dialog(Gtk.Dialog):
     def __create_ui(self):
         self.centeral = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         self.centeral.set_padding(5,5,5,5)
-        #~ self.centerbox = Gtk.VBox(False, 5)
-        #~ self.centeral.add(self.centerbox)
-        #~ vbox = Gtk.VBox()
-        #~ self.add(centeral)
         self.box = self.get_content_area()
         self.box.pack_start(self.centeral, True, True, 0)
         self.connect("response", self.on_response)

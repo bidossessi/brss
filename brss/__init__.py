@@ -24,7 +24,7 @@
 from gi.repository import Gio
 from gi.repository import GLib
 
-__version__         = '0.8.2'
+__version__         = '0.8.3'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]

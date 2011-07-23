@@ -888,7 +888,7 @@ class Engine (dbus.service.Object):
         # now delete
         try:
             favicon = Gio.file_new_for_path(GLib.build_filenamev([FAVICON_PATH,feed['id']]))
-            favicon.delete()
+            favicon.delete(None)
         except Exception, e: # not there?
             self.log.exception(e) 
         q = 'DELETE FROM feeds WHERE id = "{0}"'.format(feed['id'])
@@ -927,7 +927,7 @@ class Engine (dbus.service.Object):
                     img = Gio.file_new_for_path(GLib.build_filenamev([IMAGES_PATH,i[0]]))
                     self.log.debug("No more reference to image {0}, deleting from filesystem".format(img.get_path()))
                     try:
-                        img.delete()
+                        img.delete(None)
                         # now remove image entry
                         q = 'DELETE FROM images WHERE id = "{0}"'.format(i[0])
                         cursor.execute(q)
