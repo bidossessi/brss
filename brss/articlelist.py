@@ -402,10 +402,9 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         iter = model.get_iter_first()
         while iter:
             path = model.get_path(iter)
-            if model[path][1] == False:
-                model[path][1] = True
-                model[path][6] = self.__get_weight(model[path][1])
-                self.emit('read-toggled', self.__get_current(model[path]))
+            item = self.__get_current(model[path])
+            item['read'] = False # forcing it
+            self.emit('read-toggled', item)
             iter = model.iter_next(iter)
 
     def run_dcall(self, callback_name, item):

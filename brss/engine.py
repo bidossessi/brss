@@ -248,12 +248,11 @@ class FeedGetter(threading.Thread):
             if webimg.copy(img, flags, None, 
                         self.__log_progress, nsrc):
                 self.log.debug("Favicon found for {0}".format(feed['name']))
-                return True
-            self.log.debug("No favicon available for {0}".format(feed['name']))
-            return False
+            else:
+                self.log.debug("No favicon available for {0}".format(feed['name']))
         except Exception, e:
             self.log.exception(e)
-            return False
+        return False
     def __check_feed_item(self, feed_item):
         """
         Pre-format a feed article for database insertion.

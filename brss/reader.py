@@ -280,7 +280,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.set_property("width-request", 1024)
         self.is_fullscreen = False
         self.__reset_title()
-        self.set_icon_from_file(make_path('icons','brss.svg'))
+        self.set_icon_from_file(make_path('icons/hicolor','brss.svg'))
         self.alert = Alerts(self)
         self.connect("destroy", self.quit)
         self.show_all()
