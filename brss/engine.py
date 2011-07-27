@@ -27,8 +27,7 @@
 # Feedgetter can the drop the threading and become an async with
 # loop_callback its... callback.
 #
-#TODO: Use GCancellable to cancel updates
-#TODO: Moving file operation code to GIO
+#TODO: move to GDBus
 
 import time
 import datetime
@@ -42,7 +41,6 @@ import dbus.service
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-
 from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import GLib
@@ -52,14 +50,15 @@ GObject.threads_init()
 Gdk.threads_init()
 
 from xml.etree  import ElementTree
-from Queue      import Queue
+import i18n
+_ = i18n.language.gettext
 
 from logger     import Logger
-from functions  import make_time, make_uuid, make_path
 from task       import GeneratorTask
-from brss       import BASE_KEY, BASE_PATH
-from brss       import DB_PATH, FAVICON_PATH, IMAGES_PATH
-from brss       import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
+from common  import make_time, make_uuid, make_path
+from common  import BASE_KEY, BASE_PATH
+from common  import DB_PATH, FAVICON_PATH, IMAGES_PATH
+from common  import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 
 class FeedGetter(threading.Thread):
     """
@@ -465,7 +464,7 @@ class Engine (dbus.service.Object):
         for c in cats:
             self.__add_category(c)
         self.__update_feeds(feeds, self.settings.get_boolean('on-the-fly')) # on-the-fly policy
-        self.notice('ok', 'Feeds imported!')
+        self.notice('ok', _('Feeds imported!'))
         self.__update_all()
     
     @dbus.service.method('com.itgears.BRss.Engine', out_signature='aa{sv}')
@@ -476,13 +475,13 @@ class Engine (dbus.service.Object):
         try:
             arts = self.__make_articles_list(q)
             if len(arts) > 0:
-                self.notice('new', 'Found {0} articles matching "{1}"'.format(len(arts), string))
+                self.notice('new', _('Found {0} articles matching "{1}"'.format(len(arts), string)))
             else:    
-                self.warning('Couldn\'t find any article matching "{0}"'.format(string))
+                self.warning(_('Couldn\'t find any article matching "{0}"'.format(string)))
             return arts
         except Exception, e:
             self.log.exception(e) 
-            self.warning('Search for "{0}" failed!'.format(string))
+            self.warning(_('Search for "{0}" failed!'.format(string)))
 
     @dbus.service.method('com.itgears.BRss.Engine', in_signature='a{sv}')
     def toggle_starred(self, item):
@@ -523,17 +522,17 @@ class Engine (dbus.service.Object):
         pass
     @dbus.service.signal('com.itgears.BRss.Engine')
     def complete(self, c):
-        self.notice('ok',"Updated {0} feed(s) | {1} new article(s)".format(c, self.__added_count))
+        self.notice('ok',_("Updated {0} feed(s) | {1} new article(s)".format(c, self.__added_count)))
         self.__notify_update(c, self.__added_count)
 
     @dbus.service.signal('com.itgears.BRss.Engine')
     def updating(self, c):
-        self.notice('wait',"Updating {0} feed(s)".format(c))
+        self.notice('wait',_("Updating {0} feed(s)".format(c)))
 
     @dbus.service.signal('com.itgears.BRss.Engine', signature='a{sv}')
     def added(self, item):
         #TODO: This should also handle articles
-        self.notice('added',"[{0}] {1} added".format(item['type'], item['name']))
+        self.notice('added',_("[{0}] {1} added".format(item['type'], item['name'])))
 
     ## 6. Runners and stoppers
     @dbus.service.method('com.itgears.BRss.Engine')
@@ -569,7 +568,6 @@ class Engine (dbus.service.Object):
         self.__added_count      = 0
         self.__deleted_feeds    = []
         self.timeout_id         = None
-        self.log.enable_debug(self.settings.get_boolean('enable-debug'))
         # d-bus
         bus_name = dbus.service.BusName(ENGINE_DBUS_KEY, bus=dbus.SessionBus())
         dbus.service.Object.__init__(self, bus_name, ENGINE_DBUS_PATH)
@@ -686,7 +684,6 @@ class Engine (dbus.service.Object):
             try:
                 articles = feed.pop('articles') # we don't need them here
             except KeyError:
-                #~ self.notice('warning', '[Feed] {0} has no new articles, or we may be offline'.format(feed['name']))
                 articles = None
             except Exception, e:
                 self.log.warning("Error occured: {0}".format(e))
@@ -800,9 +797,8 @@ class Engine (dbus.service.Object):
             cursor.close()
             category['count'] = self.__count_unread_articles(category)
             self.updated(category)
-            #~ self.notice('info', "[Category] {0} edited".format(category['name'].encode('utf-8')))
         except AssertionError:
-            self.warning("Category {0} doesn't exist, or is a duplicate! Aborting".format(category['name'].encode('utf-8')))
+            self.warning(_("Category {0} doesn't exist, or is a duplicate! Aborting".format(category['name'].encode('utf-8'))))
     def __edit_feed(self, feed):
         try:
             assert self.__item_exists('feeds', 'id', feed['id']) == True
@@ -823,7 +819,7 @@ class Engine (dbus.service.Object):
             #~ self.updated(feed)
             #~ self.notice('info', "[Feed] {0} edited".format(feed['url']))
         except AssertionError:
-            self.warning("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['url']))
+            self.warning(_("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['url'])))
     def __update_all(self):
         feeds = []
         categories = self.__get_all_categories()
@@ -876,9 +872,9 @@ class Engine (dbus.service.Object):
             cursor.execute(q)
             self.conn.commit()
             cursor.close()
-            self.notice('warning', "Category {0} deleted!".format(category['name'].encode('utf-8')))
+            self.notice('warning', _("Category {0} deleted!".format(category['name'].encode('utf-8'))))
         else:
-            self.notice('warning', "All uncategorized feeds deleted!")
+            self.notice('warning', _("All uncategorized feeds deleted!"))
     def __delete_feed(self, feed):
         articles = self.get_articles_for(feed)
         if articles:
@@ -896,7 +892,7 @@ class Engine (dbus.service.Object):
         self.conn.commit()
         cursor.close()    
         self.__deleted_feeds.append(feed['url'])
-        self.notice('warning', "[Feed] {0} deleted!".format(feed['url']))
+        self.notice('warning', _("[Feed] {0} deleted!".format(feed['url'])))
     def __delete_article(self, art_id):
         self.log.debug("Deleting article {0}".format(art_id))
         try:
@@ -993,7 +989,7 @@ class Engine (dbus.service.Object):
     def __update_ended(self, feed):
         if feed:
             feed['count'] = self.__count_unread_articles(feed)
-            self.notice('wait', 'Updated [Feed] {0}'.format(feed['url']))
+            self.notice('wait', _('Updated [Feed] {0}'.format(feed['url'])))
             self.updated(feed)
         
     def __timed_update(self, *args):
@@ -1171,8 +1167,9 @@ class Engine (dbus.service.Object):
             CREATE TABLE images(
                 id varchar(256) PRIMARY KEY, 
                 url TEXT NOT NULL);
-            INSERT INTO categories(id,name) VALUES('uncategorized','Uncategorized');
             ''')
+        self.conn.commit()
+        cursor.execute("INSERT INTO categories(id,name) VALUES('uncategorized',{0})".format(_('Uncategorized')).decode('utf-8'))
         self.conn.commit()
         cursor.close()
         
@@ -1182,8 +1179,8 @@ class Engine (dbus.service.Object):
             self.log.debug("Startup Notification suppressed")
         else:
             n = Notify.Notification.new(
-                "BRss started",
-                "BRss Feed Engine is running",
+                _("BRss started"),
+                _("BRss Feed Engine is running"),
                 make_path('icons', 'brss-engine.svg'))
             n.show()
 
@@ -1192,16 +1189,16 @@ class Engine (dbus.service.Object):
             self.log.debug("Update Notification suppressed")
         else:
             n = Notify.Notification.new(
-                "BRss: Update report",
-                "Updated {0} feeds\n{1} new article(s)\n{2} unread article(s)".format(
-                    c, ac, self.__count_unread_articles()),
+                _("BRss: Update report"),
+                _("Updated {0} feeds\n{1} new article(s)\n{2} unread article(s)".format(
+                    c, ac, self.__count_unread_articles())),
                 make_path('icons', 'brss-engine.svg'))
             n.show()
 
 def main():
     session_bus = dbus.SessionBus()
     if session_bus.request_name(ENGINE_DBUS_KEY) != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
-        print "engine already running"
+        print "Engine already running"
     else:
         engine = Engine()
         engine.start()

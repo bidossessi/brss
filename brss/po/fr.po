@@ -1,0 +1,478 @@
+# French translations for PACKAGE package
+# Traductions françaises du paquet PACKAGE.
+# Copyright (C) 2011 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>, 2011.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: BRss 0.8.5\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-07-27 16:57+0100\n"
+"PO-Revision-Date: 2011-07-27 16:58-0000\n"
+"Last-Translator: Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Poedit-Language: French\n"
+"X-Poedit-KeywordsList: _\n"
+
+#: articlelist.py:98
+msgid "Read"
+msgstr "Lu"
+
+#: articlelist.py:111
+msgid "Star"
+msgstr "Marque"
+
+#: articlelist.py:125
+msgid "Date"
+msgstr "Date"
+
+#: articlelist.py:138
+msgid "Title"
+msgstr "Titre"
+
+#: articlelist.py:472
+#: tree.py:506
+#: reader.py:565
+msgid "Mark all as read"
+msgstr "Marquer comme lu(s)"
+
+#: articlelist.py:472
+#: reader.py:568
+msgid "Open in Browser"
+msgstr "Ouvrir dans un Navigateur"
+
+#: articlelist.py:473
+#: reader.py:571
+msgid "Copy Url to Clipboard"
+msgstr "Copier l'Url vers le Presse-Papier"
+
+#: tree.py:404
+msgid "Unread"
+msgstr "Non-lu(s)"
+
+#: tree.py:405
+msgid "Starred"
+msgstr "Marqué(s)"
+
+#: tree.py:506
+#: reader.py:560
+msgid "Update"
+msgstr "Mise à Jour"
+
+#: tree.py:506
+#: tree.py:509
+#: reader.py:576
+msgid "Edit"
+msgstr "Modifier"
+
+#: tree.py:506
+#: reader.py:214
+#: reader.py:574
+msgid "Delete"
+msgstr "Supprimer"
+
+#: tree.py:507
+msgid "Add a Category"
+msgstr "Ajouter une Catégorie"
+
+#: tree.py:507
+msgid "Add a Feed"
+msgstr "Ajouter un Fil"
+
+#: engine.py:468
+msgid "Feeds imported!"
+msgstr "Fils importés"
+
+#: engine.py:479
+msgid "Found {0} articles matching \"{1}\""
+msgstr "Trouvé {0} articles correspondant à \"{1}\""
+
+#: engine.py:481
+msgid "Couldn't find any article matching \"{0}\""
+msgstr "Aucun article ne correspond a\"{0}\""
+
+#: engine.py:485
+msgid "Search for \"{0}\" failed!"
+msgstr "Recherche de \"{0}\" infructueuse!"
+
+#: engine.py:526
+msgid "Updated {0} feed(s) | {1} new article(s)"
+msgstr "Actualisé {0} fil(s) | {1} nouveaux articles"
+
+#: engine.py:531
+msgid "Updating {0} feed(s)"
+msgstr "Actualisation de {0} Fils"
+
+#: engine.py:536
+msgid "[{0}] {1} added"
+msgstr "[{0}] {1} ajouté"
+
+#: engine.py:802
+msgid "Category {0} doesn't exist, or is a duplicate! Aborting"
+msgstr "Catégorie {0} n'existe pas, ou est un doublon! Abandon"
+
+#: engine.py:823
+msgid "[Feed] {0} doesn't exist, or is a duplicate! Aborting"
+msgstr "[Fil] {0} n'existe pas, ou est un doublon! Abandon"
+
+#: engine.py:876
+msgid "Category {0} deleted!"
+msgstr "Catégorie {0} supprimée"
+
+#: engine.py:878
+msgid "All uncategorized feeds deleted!"
+msgstr "Tous les fils non-classés ont été supprimés"
+
+#: engine.py:896
+msgid "[Feed] {0} deleted!"
+msgstr "[Fil] {0} supprimé"
+
+#: engine.py:993
+msgid "Updated [Feed] {0}"
+msgstr "Actualisé [fil] {0}"
+
+#: engine.py:1173
+msgid "Uncategorized"
+msgstr "Non-classé"
+
+#: engine.py:1183
+msgid "BRss started"
+msgstr "BRss lancé"
+
+#: engine.py:1184
+msgid "BRss Feed Engine is running"
+msgstr "BRss Moteur de Fil est lancé"
+
+#: engine.py:1193
+msgid "BRss: Update report"
+msgstr "BRss: Rapport d'actualisation"
+
+#: engine.py:1194
+msgid ""
+"Updated {0} feeds\n"
+"{1} new article(s)\n"
+"{2} unread article(s)"
+msgstr ""
+"Actualisé {0} fils\n"
+"{1} nouveaux article(s)\n"
+"{2} article(s) non-lu(s)"
+
+#: reader.py:116
+msgid "Could not connect to Engine"
+msgstr "Impossible de se connecter au Moteur"
+
+#: reader.py:117
+msgid ""
+"BRss will now quit.\n"
+"Please make sure that the engine is running and restart the application"
+msgstr ""
+"BRss va s'interrompre.\n"
+"Veuillez vérifier que le Moteur est actif, et relancer l'application"
+
+#: reader.py:138
+msgid "{0}: Connected to feed engine {1}"
+msgstr "{0}:  Connecté au Moteur de Fil"
+
+#: reader.py:202
+msgid "_Feeds"
+msgstr "_Fils"
+
+#: reader.py:203
+msgid "E_dit"
+msgstr "Modifi_er"
+
+#: reader.py:204
+msgid "_Network"
+msgstr "_Réseau"
+
+#: reader.py:205
+msgid "_View"
+msgstr "_Vue"
+
+#: reader.py:206
+msgid "_Help"
+msgstr "_Aide"
+
+#: reader.py:207
+msgid "_About"
+msgstr "_A propos"
+
+#: reader.py:207
+msgid "About"
+msgstr "A propos"
+
+#: reader.py:212
+msgid "_New feed"
+msgstr "_Nouveau Fil"
+
+#: reader.py:212
+#: reader.py:422
+msgid "Add a feed"
+msgstr "Ajouter un Fil"
+
+#: reader.py:213
+msgid "New _category"
+msgstr "Nouvelle _catégorie"
+
+#: reader.py:213
+#: reader.py:411
+msgid "Add a category"
+msgstr "Ajouter une catégorie"
+
+#: reader.py:214
+msgid "Delete a feed or a category"
+msgstr "Supprimer un fil ou une catégorie"
+
+#: reader.py:215
+msgid "Import feeds"
+msgstr "Importer des fils"
+
+#: reader.py:215
+msgid "Import a feedlist"
+msgstr "Importer une liste de fils"
+
+#: reader.py:216
+msgid "Export feeds"
+msgstr "Exporter les fils"
+
+#: reader.py:216
+msgid "Export a feedlist"
+msgstr "Exporter la liste de fils"
+
+#: reader.py:217
+msgid "_Quit"
+msgstr "_Quitter"
+
+#: reader.py:217
+msgid "Quits"
+msgstr "Interrompre"
+
+#: reader.py:218
+msgid "_Edit"
+msgstr "Modifi_er"
+
+#: reader.py:218
+msgid "Edit the selected element"
+msgstr "Modifier l'élément sélectionné"
+
+#: reader.py:219
+msgid "_Star"
+msgstr "_Marque"
+
+#: reader.py:219
+msgid "Star the current article"
+msgstr "Marquer l'article courant"
+
+#: reader.py:220
+msgid "_Read"
+msgstr "_Lu"
+
+#: reader.py:220
+msgid "Toggle the current article read status"
+msgstr "Changé l'état lu de cette article"
+
+#: reader.py:221
+msgid "_Preferences"
+msgstr "_Preferences"
+
+#: reader.py:221
+msgid "Configure the engine"
+msgstr "Configurer le moteur"
+
+#: reader.py:222
+msgid "_Update"
+msgstr "Act_ualiser"
+
+#: reader.py:222
+msgid "Update the selected feed"
+msgstr "Actualiser le fil courant"
+
+#: reader.py:223
+#: reader.py:560
+msgid "Update all"
+msgstr "Tout actualiser"
+
+#: reader.py:223
+msgid "Update all feeds"
+msgstr "Actualiser tous les fils"
+
+#: reader.py:224
+msgid "Previous Article"
+msgstr "Article Précédent"
+
+#: reader.py:224
+msgid "Go to the previous article"
+msgstr "Aller à l'article précédent"
+
+#: reader.py:225
+msgid "Next Article"
+msgstr "Article Suivant"
+
+#: reader.py:225
+msgid "Go to the next article"
+msgstr "Aller à l'article suivant"
+
+#: reader.py:226
+msgid "Previous Feed"
+msgstr "Fil Précédent"
+
+#: reader.py:226
+msgid "Go to the previous news feed"
+msgstr "Aller au fil précédent"
+
+#: reader.py:227
+msgid "Next Feed"
+msgstr "Fil Suivant"
+
+#: reader.py:227
+msgid "Go to the next news feed"
+msgstr "Aller au fil suivant"
+
+#: reader.py:228
+msgid "Stop"
+msgstr "Stop"
+
+#: reader.py:228
+msgid "Stop the current update"
+msgstr "Suspendre l'actualisation en cours"
+
+#: reader.py:231
+msgid "Find"
+msgstr "Rechercher"
+
+#: reader.py:231
+msgid "Search for a term in the articles"
+msgstr "Rechercher un terme dans les articles"
+
+#: reader.py:232
+msgid "Fullscreen"
+msgstr "Plein-écran"
+
+#: reader.py:232
+msgid "(De)Activate fullscreen"
+msgstr "(Dé)Activer le plein-écran"
+
+#: reader.py:239
+msgid "_Reconnect"
+msgstr "_Reconnexion"
+
+#: reader.py:239
+msgid "Try and reconnect to the feed engine"
+msgstr "Tenter une reconnexion au moteur de fil"
+
+#: reader.py:329
+msgid "Open..."
+msgstr "Ouvrir..."
+
+#: reader.py:344
+msgid "All files"
+msgstr "Tous les fichiers"
+
+#: reader.py:359
+msgid "Save..."
+msgstr "Enregistrer..."
+
+#: reader.py:409
+#: reader.py:503
+msgid "Name"
+msgstr "Nom"
+
+#: reader.py:420
+#: reader.py:506
+msgid "Link"
+msgstr "Lien"
+
+#: reader.py:444
+msgid "Hide Read Items"
+msgstr "Cacher les éléments lus"
+
+#: reader.py:445
+msgid "Update interval (in minutes)"
+msgstr "Interval d'actualisation (en minutes)"
+
+#: reader.py:446
+msgid "Maximum number of articles to keep (excluding starred)"
+msgstr "Nombre maximal d'articles à conserver (excluant les marqués)"
+
+#: reader.py:447
+msgid "Allow the engine to download new articles automatically."
+msgstr "Autoriser le moteur à télécharger les nouveaux articles automatiquement"
+
+#: reader.py:448
+msgid "Start downloading articles for new feeds on-the-fly"
+msgstr "Lancer le téléchargement d'articles pour les nouveaux fils au vol"
+
+#: reader.py:449
+msgid "Show notification on updates"
+msgstr "Montrer les notifications d'actualisation"
+
+#: reader.py:450
+msgid "Enable detailed logs"
+msgstr "Permettre des rapports détailés"
+
+#: reader.py:451
+msgid "Return search results as you type"
+msgstr "Chercher des résultats pendant la saisie"
+
+#: reader.py:452
+msgid "Hide Search form on results"
+msgstr "Cacher la barre de recherche après une requête"
+
+#: reader.py:453
+msgid "Show the bottom status bar"
+msgstr "Montrer la barre de status"
+
+#: reader.py:462
+msgid "Edit preferences"
+msgstr "Modifier les préférences"
+
+#: reader.py:490
+msgid "BRss is an offline DBus-based RSS reader"
+msgstr "BRss est un lecteur de fils RSS hors-ligne basé sur DBus"
+
+#: reader.py:504
+msgid "Edit this category"
+msgstr "Modifier cette catégorie"
+
+#: reader.py:507
+msgid "Edit this feed"
+msgstr "Modifier ce fil"
+
+#: reader.py:534
+msgid "Are you sure you want to delete this {0} ?"
+msgstr "Etes-vous sûr(e) de vouloir supprimmer ce(tte) {0} ?"
+
+#: reader.py:535
+msgid "All included feeds and articles will be deleted."
+msgstr "Tous les fils et articles seront supprimés"
+
+#: reader.py:574
+msgid "Delete Feed"
+msgstr "Supprimer Fil"
+
+#: reader.py:574
+msgid "Delete Category"
+msgstr "Supprimer Catégorie"
+
+#: reader.py:695
+msgid "Cannot connect to the Feed Engine"
+msgstr "Impossible de se connecter au Moteur de Fil"
+
+#: reader.py:711
+msgid "Connected to engine"
+msgstr "Connecté au Moteur"
+
+#: reader.py:766
+msgid "Another instance is already running"
+msgstr "Une autre instance est déjà lancée"
+
+#: reader.py:768
+msgid "Could not start engine. Aborting"
+msgstr "Impossible de lancer le Moteur. Abandon"
+

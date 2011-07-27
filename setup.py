@@ -22,21 +22,73 @@
 #       
 #       
 from setuptools import setup, find_packages
-import os, sys, glob, platform
-from brss import __version__, __maintainers__
+#~ import os, sys, glob, platform
 
-data_files = []
-if platform.system() in ('Linux', 'SunOS'):
-    applications = glob.glob("brss/applications/*")
-    icons = glob.glob("brss/icons/hicolor/*")
-    pixmaps = glob.glob("brss/pixmaps/*")
-    schemas = glob.glob("brss/schemas/*")
-    data_files.extend([
-        ("/usr/share/applications", applications),
-        ("/usr/share/icons/hicolor", icons),
-        ("/usr/share/pixmaps", pixmaps),
-        ("/usr/share/glib-2.0/schemas", schemas)
-        ])
+#~ from distutils.core import setup
+from distutils import cmd
+from distutils.command.install_data import install_data as _install_data
+from distutils.command.build import build as _build
+ 
+import msgfmt
+import os, sys, glob, platform
+
+from brss.common import __version__, __maintainers__
+
+DATA = [
+        ("applications", glob.glob("brss/applications/*")),
+        ("icons/hicolor", glob.glob("brss/icons/hicolor/*")),
+        ("pixmaps", glob.glob("brss/pixmaps/*")),
+        ("glib-2.0/schemas", glob.glob("brss/schemas/*"))
+        ]
+
+class build_trans(cmd.Command):
+    description = 'Compile .po files into .mo files'
+    def initialize_options(self):
+        pass
+ 
+    def finalize_options(self):
+        pass
+ 
+    def run(self):
+        po_dir = os.path.join(os.path.dirname(os.curdir), 'brss', 'po')
+        for path, names, filenames in os.walk(po_dir):
+            for f in filenames:
+                if f.endswith('.po'):
+                    lang = f[:len(f) - 3]
+                    src = os.path.join(path, f)
+                    dest_path = os.path.join('brss', 'locale', lang, 'LC_MESSAGES')
+                    dest = os.path.join(dest_path, 'brss.mo')
+                    if not os.path.exists(dest_path):
+                        os.makedirs(dest_path)
+                    if not os.path.exists(dest):
+                        print 'Compiling %s' % src
+                        msgfmt.make(src, dest)
+                    else:
+                        src_mtime = os.stat(src)[8]
+                        dest_mtime = os.stat(dest)[8]
+                        if src_mtime > dest_mtime:
+                            print 'Compiling %s' % src
+                            msgfmt.make(src, dest)
+
+class build(_build):
+    sub_commands = _build.sub_commands + [('build_trans', None)]
+    def run(self):
+        _build.run(self)
+
+class install_data(_install_data):
+ 
+    def run(self):
+        for lang in os.listdir('brss/locale/'):
+            lang_dir = os.path.join('locale', lang, 'LC_MESSAGES')
+            lang_file = os.path.join('brss', 'locale', lang, 'LC_MESSAGES', 'brss.mo')
+            self.data_files.append( (lang_dir, [lang_file]) )
+        _install_data.run(self)
+
+cmdclass = {
+    'build': build,
+    'build_trans': build_trans,
+    'install_data': install_data,
+}
 
 setup(
     name='brss',
@@ -57,11 +109,13 @@ setup(
     author_email='bidossessi.sodonon@yahoo.fr',
     zip_safe=False,
     entry_points = {
-        'gui_scripts': ['brss-reader = brss.reader:main'],
-        'console_scripts': ['brss-engine = brss.engine:main'],
+        'gui_scripts': ['brss-reader = brss:run_reader'],
+        'console_scripts': ['brss-engine = brss:run_engine'],
        },
-    package_dir = {'brss': 'brss'},
-    package_data = {},
-    include_package_data = True,
-    data_files = data_files
+    package_dir             = {'brss': 'brss'},
+    package_data            = {},
+    include_package_data    = True,
+    data_files              = DATA,
+    cmdclass                = cmdclass,
+
 )

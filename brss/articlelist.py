@@ -26,8 +26,11 @@ from gi.repository  import Gio
 from gi.repository  import Gdk
 from gi.repository  import GObject
 from gi.repository  import Pango
-from functions      import make_date
-from brss           import BASE_KEY
+import i18n
+_ = i18n.language.gettext
+
+from common      import make_date
+from common      import BASE_KEY
 
 class ArticleList (Gtk.VBox, GObject.GObject):
     """
@@ -93,7 +96,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         ## COLUMNS | store structure (id, read, starred, date, title, url, weight, feed_id)
         # read
         column = Gtk.TreeViewColumn()
-        label = Gtk.Label(label='Read')
+        label = Gtk.Label(label=_('Read'))
         label.show()
         column.set_widget(label)
         column.set_fixed_width(30)
@@ -106,7 +109,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.listview.append_column(column)
         # starred
         column = Gtk.TreeViewColumn()
-        label = Gtk.Label(label='Star')
+        label = Gtk.Label(label=_('Star'))
         label.show()
         column.set_widget(label)
         column.set_fixed_width(15)
@@ -120,7 +123,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.listview.append_column(column)
         # date
         column = Gtk.TreeViewColumn()
-        label = Gtk.Label(label='Date')
+        label = Gtk.Label(label=_('Date'))
         label.show()
         column.set_widget(label)
         column.set_resizable(True)
@@ -133,7 +136,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.listview.append_column(column)
         # title
         column = Gtk.TreeViewColumn()
-        label = Gtk.Label(label='Title')
+        label = Gtk.Label(label=_('Title'))
         label.show()
         column.set_widget(label)
         column.set_resizable(True)
@@ -467,8 +470,8 @@ class ArticleListMenu(Gtk.Menu):
         if not self._dirty:
             return
         self.clean()
-        for i in ['Mark all as read', 'Open in Browser', 
-            'Copy Url to Clipboard']:
+        for i in [_('Mark all as read'), _('Open in Browser'), 
+            _('Copy Url to Clipboard')]:
             menuitem = Gtk.MenuItem()
             menuitem.set_label(i)
             signal_id = menuitem.connect("activate",
@@ -481,10 +484,7 @@ class ArticleListMenu(Gtk.Menu):
         self._dirty = False
     def _on_menuitem__activate(self, menuitem, callname, item):
         # switch dialog or direct call
-        if callname in ['Edit', 'Add a Category', 'Add a Feed']:
-            self._treeview.run_dialog(callname, item)
-        elif callname in ['Open in Browser', 'Copy Url to Clipboard']:
-            self._treeview.run_dcall(callname, item)
+        self._treeview.run_dcall(callname, item)
     def _on_event(self, treeview, event):
         """Respond to mouse click or key press events in a GtkTree."""
         if event.type == Gdk.EventType.BUTTON_RELEASE:

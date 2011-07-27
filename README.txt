@@ -29,9 +29,7 @@ brss-reader is a GTK+ client for brss-engine.
 
 INSTALL:
 --------
-Reminder: BRss is still "alpha" software.  It works just fine for me, 
-but I can't garantee that it won't crash your system, burn down your 
-house or help me achieve world domination. Use at your own risks.
+Reminder: BRss is still "alpha" software. Use at your own risks.
 
 BRss requires the following python modules to run.
 
@@ -47,8 +45,8 @@ In Archlinux run the following command as root:
 
 1. Extract the archive
 
-$ tar zxf brss-0.8.2dev.tar.gz
-$ cd brss
+$ tar zxf brss-0.8.5dev.tar.gz
+$ cd brss-0.8.5dev
 
 2. Install
 

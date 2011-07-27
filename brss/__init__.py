@@ -21,32 +21,12 @@
 #       MA 02110-1301, USA.
 #       
 #       
-from gi.repository import Gio
-from gi.repository import GLib
+from gi.repository  import Gio
+from gi.repository  import GLib
 
-__version__         = '0.8.3'
-__authors__         = ["Bidossessi SODONON"]
-__maintainers__     = ["Bidossessi SODONON"]
-__documenters__     = ["Bidossessi SODONON"]
-__artists__         = ["Bidossessi SODONON"]
-BASE_KEY            = 'com.itgears.BRss'
-ENGINE_DBUS_KEY     = 'com.itgears.BRss.Engine'
-ENGINE_DBUS_PATH    = '/com/itgears/BRss/Engine'
-READER_DBUS_KEY     = 'com.itgears.BRss.Reader'
-READER_DBUS_PATH    = '/com/itgears/BRss/Reader'
-BASE_PATH           = GLib.build_filenamev([GLib.get_user_config_dir(),'brss'])
-FAVICON_PATH        = GLib.build_filenamev([BASE_PATH, 'favicons'])
-IMAGES_PATH         = GLib.build_filenamev([BASE_PATH, 'images'])
-DB_PATH             = GLib.build_filenamev([BASE_PATH, 'brss.db'])
-base_dir            = Gio.file_new_for_path(BASE_PATH)
-favicon_dir         = Gio.file_new_for_path(FAVICON_PATH)
-images_dir          = Gio.file_new_for_path(IMAGES_PATH)
-
-try:base_dir.make_directory()
-except:pass 
-try:favicon_dir.make_directory()
-except:pass 
-try:images_dir.make_directory()
-except:pass 
+from engine         import main as run_engine
+from reader         import main as run_reader
 
 # All set
+import i18n
+_ = i18n.language.gettext

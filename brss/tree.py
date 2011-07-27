@@ -27,8 +27,11 @@ from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Pango
-from functions     import make_path
-from brss          import BASE_PATH, IMAGES_PATH, FAVICON_PATH
+import i18n
+_ = i18n.language.gettext
+
+from common     import make_path
+from common     import BASE_PATH, IMAGES_PATH, FAVICON_PATH
 
 class Tree (Gtk.VBox, GObject.GObject):
     """ The Tree handles feeds and categories management. """
@@ -207,9 +210,9 @@ class Tree (Gtk.VBox, GObject.GObject):
         name = model.get_value(iter, 2)
         count = model.get_value(iter, 3)
         if int(count) > 0:
-           cell.set_property("text",'{0} [{1}]'.format(name, count))
+           cell.set_property("text",'{0} [{1}]'.format(_(name), count))
         else:
-           cell.set_property("text",name)
+           cell.set_property("text",_(name))
         cell.set_property("weight", self.__get_weight(int(count)))
         cell.set_property("ellipsize", Pango.EllipsizeMode.MIDDLE)
     
@@ -399,8 +402,8 @@ class Tree (Gtk.VBox, GObject.GObject):
         
     def make_special_folders(self, unread, starred):
         self.sstore.clear()
-        u = ('unread', '0','Unread', unread, 'gtk-new')
-        s = ('starred', '0', 'Starred', starred, 'gtk-about')
+        u = ('unread', '0',_('Unread'), unread, 'gtk-new')
+        s = ('starred', '0', _('Starred'), starred, 'gtk-about')
         self.sstore.append(None, u)
         self.sstore.append(None, s)
         self.emit('list-loaded')
@@ -501,10 +504,10 @@ class TreeMenu(Gtk.Menu):
             return
         self.clean()
     
-        mlist = ['Mark all as read', 'Update', 'Edit', 'Delete', 'sep',
-                        'Add a Category', 'Add a Feed']
+        mlist = [_('Mark all as read'), _('Update'), _('Edit'), _('Delete'), 'sep',
+                        _('Add a Category'), _('Add a Feed')]
         if item['id'] == "uncategorized":
-            mlist.pop(mlist.index('Edit'))
+            mlist.pop(mlist.index(_('Edit')))
         for i in mlist:
             if i == 'sep':
                 sep = Gtk.SeparatorMenuItem()

@@ -24,6 +24,9 @@
 
 from gi.repository import Gtk
 from gi.repository import Gio
+import i18n
+_ = i18n.language.gettext
+
 class Custom:
     def __init__(self, name, header):
         self.name = name
@@ -159,23 +162,3 @@ class Dialog(Gtk.Dialog):
         if response_id == Gtk.ResponseType.OK:
             self.response = self.collect_response()
         dialog.hide()
-        
-def main():
-    from view import View
-    window = Gtk.Window()
-    window.connect("destroy", Gtk.main_quit)
-    window.set_default_size(600, 400)
-    #~ view = 
-    #~ window.add(view)
-    window.show_all()
-    args = [
-        {'type':'str','name':'yoo', 'header':'This is a text entry' },
-        {'type':'bool','name':'art', 'header':'This cool entry', 'value':True }
-        ]
-    d = Dialog(window, 'test', args)
-    d.run()
-    d.destroy()
-    Gtk.main()
-
-if __name__ == '__main__':
-    main()
