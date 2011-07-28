@@ -27,7 +27,7 @@ from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import GObject
 from gi.repository import WebKit
-from functions import make_date
+from brss.common import make_date
     
 class View (Gtk.VBox, GObject.GObject):
     """

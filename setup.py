@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 #       setup.py
@@ -21,24 +21,21 @@
 #       MA 02110-1301, USA.
 #       
 #       
-from setuptools import setup, find_packages
-#~ import os, sys, glob, platform
-
-#~ from distutils.core import setup
+from setuptools import setup
 from distutils import cmd
 from distutils.command.install_data import install_data as _install_data
 from distutils.command.build import build as _build
  
-import msgfmt
 import os, sys, glob, platform
 
 from brss.common import __version__, __maintainers__
+from brss import msgfmt
 
 DATA = [
-        ("applications", glob.glob("brss/applications/*")),
-        ("icons/hicolor", glob.glob("brss/icons/hicolor/*")),
-        ("pixmaps", glob.glob("brss/pixmaps/*")),
-        ("glib-2.0/schemas", glob.glob("brss/schemas/*"))
+        ("share/applications", glob.glob("brss/applications/*")),
+        ("share/icons/hicolor", glob.glob("brss/icons/hicolor/*")),
+        ("share/pixmaps", glob.glob("brss/pixmaps/*")),
+        ("share/glib-2.0/schemas", glob.glob("brss/schemas/*")),
         ]
 
 class build_trans(cmd.Command):
@@ -79,7 +76,7 @@ class install_data(_install_data):
  
     def run(self):
         for lang in os.listdir('brss/locale/'):
-            lang_dir = os.path.join('locale', lang, 'LC_MESSAGES')
+            lang_dir = os.path.join('share','locale', lang, 'LC_MESSAGES')
             lang_file = os.path.join('brss', 'locale', lang, 'LC_MESSAGES', 'brss.mo')
             self.data_files.append( (lang_dir, [lang_file]) )
         _install_data.run(self)
@@ -92,30 +89,38 @@ cmdclass = {
 
 setup(
     name='brss',
-    packages = find_packages(),
+    packages = ['brss'],
     version = __version__,
     description = "Offline DBus RSS reader",
     fullname = "BRss Offline RSS Reader",
     long_description = open('README.txt').read(),
+    url = "https://sourceforge.net/projects/brss/",
     classifiers = [
-        "Programming Language :: Python",
-        "Topic :: Internet",
-        "Environment :: GTK ",
+        "Development Status :: 3 - Alpha",
+        "Environment :: No Input/Output (Daemon)",
+        "Environment :: X11 Applications :: GTK ",
         "Intended Audience :: End Users/Desktop",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "Natural Language :: English",
         "Operating System :: POSIX",
-        "Licence :: OSI Approved :: GNU General Public License (GPL)",
+        "Programming Language :: Python",
+        "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: News/Diary",
         ],
-    author=__maintainers__,
-    author_email='bidossessi.sodonon@yahoo.fr',
+    author = __maintainers__,
+    author_email = 'bidossessi.sodonon@yahoo.fr',
+    package_dir = {'brss': 'brss'},
+    #~ install_requires = [
+        #~ 'pygobject',
+        #~ 'feedparser>= 5.0.1',
+        #~ 'pysqlite>=2.6',
+        #~ 'dbus-python'
+        #~ ],
+    scripts = ['brss/bin/brss-reader', 'brss/bin/brss-engine'],
     zip_safe=False,
-    entry_points = {
-        'gui_scripts': ['brss-reader = brss:run_reader'],
-        'console_scripts': ['brss-engine = brss:run_engine'],
-       },
-    package_dir             = {'brss': 'brss'},
-    package_data            = {},
-    include_package_data    = True,
-    data_files              = DATA,
-    cmdclass                = cmdclass,
-
+    #~ entry_points = {
+        #~ 'gui_scripts': ['brss-reader = brss:run_reader'],
+        #~ 'console_scripts': ['brss-engine = brss:run_engine'],
+       #~ },
+    data_files = DATA,
+    cmdclass = cmdclass
 )

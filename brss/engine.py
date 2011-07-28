@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 #       engine.py
@@ -55,7 +55,7 @@ _ = i18n.language.gettext
 
 from logger     import Logger
 from task       import GeneratorTask
-from common  import make_time, make_uuid, make_path
+from common  import make_time, make_uuid, make_path, init_dirs
 from common  import BASE_KEY, BASE_PATH
 from common  import DB_PATH, FAVICON_PATH, IMAGES_PATH
 from common  import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
@@ -1196,6 +1196,7 @@ class Engine (dbus.service.Object):
             n.show()
 
 def main():
+    init_dirs()
     session_bus = dbus.SessionBus()
     if session_bus.request_name(ENGINE_DBUS_KEY) != dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "Engine already running"

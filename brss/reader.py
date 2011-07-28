@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 #       reader.py
@@ -42,7 +42,7 @@ from status         import Status
 from alerts         import Alerts
 from dialogs        import Dialog
 from logger         import Logger
-from common      import make_path, make_pixbuf
+from common      import make_path, make_pixbuf, init_dirs
 from common      import BASE_KEY, BASE_PATH
 from common      import ENGINE_DBUS_KEY, ENGINE_DBUS_PATH
 from common      import READER_DBUS_KEY, READER_DBUS_PATH

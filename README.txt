@@ -41,7 +41,8 @@ python-dbus
 How to install this modules may vary depending on your distribution.
 In Archlinux run the following command as root:
 
-# pacman -S dbus-python pygobject python2-feedparser python-pysqlite gtk3 libwebkit3 libnotify
+# pacman -S dbus-python pygobject python2-feedparser python-pysqlite gtk3 \
+    libwebkit3 libnotify gcc gettext
 
 1. Extract the archive
 
@@ -66,10 +67,8 @@ TODO:
 The following are planned, in no particular order:
 
     - Provide a proper install script.
-    - Localization
     - Documentation
     - Gnome3 design guidelines compliance
     - Better logo and pixmaps
     - CLI interface
-    - Synapse integration (for adding feeds)
     - DnD feed recategorizing
