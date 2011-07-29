@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=0.1
+Encoding=UTF-8
+Name=BRss Service
+GenericName=BRss Service
+Comment=DBus RSS service
+Terminal=True
+Type=Application
+Exec=brss-engine
+Icon=brss-engine
+Categories=Application;Network;

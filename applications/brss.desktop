@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=0.1
+Encoding=UTF-8
+Name=BRss
+GenericName=Rss Reader
+Comment=Offline RSS Reader
+Terminal=false
+StartupNotify=false
+Type=Application
+Exec=brss-reader
+Icon=brss
+Categories=Application;Network;
