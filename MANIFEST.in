@@ -1,6 +1,6 @@
-recursive-include   brss/bin *
-recursive-include   brss/pixmaps *
-recursive-include   brss/applications *
-recursive-include   brss/icons/hicolor *
-recursive-include   brss/po *
-include             brss/schemas/com.itgears.BRss.gschema.xml
+recursive-include   bin *
+recursive-include   pixmaps *
+recursive-include   applications *
+recursive-include   icons/hicolor *
+recursive-include   po *
+include             schemas/com.itgears.BRss.gschema.xml

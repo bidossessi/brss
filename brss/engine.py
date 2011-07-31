@@ -577,9 +577,11 @@ class Engine (dbus.service.Object):
             self.__loop_callback, 
             self.__loop_done)
         # ok, looks like we can start
-        Notify.init('BRss')
-        if self.settings.get_boolean('use-notify'):
-            self.__notify_startup()
+        try:
+            Notify.init('BRss')
+            if self.settings.get_boolean('use-notify'):
+                self.__notify_startup()
+        except:pass # until notification-daemon gets fixed
         self.log.debug("Starting {0}".format(self))
         
     def __set_polling(self, settings, key=None):
@@ -1169,7 +1171,7 @@ class Engine (dbus.service.Object):
                 url TEXT NOT NULL);
             ''')
         self.conn.commit()
-        cursor.execute("INSERT INTO categories(id,name) VALUES('uncategorized',{0})".format(_('Uncategorized')).decode('utf-8'))
+        cursor.execute("INSERT INTO categories(id,name) VALUES('uncategorized','{0}')".format(_('Uncategorized')).decode('utf-8'))
         self.conn.commit()
         cursor.close()
         
@@ -1178,22 +1180,26 @@ class Engine (dbus.service.Object):
         if not self.settings.get_boolean('use-notify'):
             self.log.debug("Startup Notification suppressed")
         else:
-            n = Notify.Notification.new(
-                _("BRss started"),
-                _("BRss Feed Engine is running"),
-                make_path('icons', 'brss-engine.svg'))
-            n.show()
+            try:
+                n = Notify.Notification.new(
+                    _("BRss started"),
+                    _("BRss Feed Engine is running"),
+                    make_path('icons', 'brss-engine.svg'))
+                n.show()
+            except:pass
 
     def __notify_update(self, c, ac):
         if not self.settings.get_boolean('use-notify'):
             self.log.debug("Update Notification suppressed")
         else:
-            n = Notify.Notification.new(
-                _("BRss: Update report"),
-                _("Updated {0} feeds\n{1} new article(s)\n{2} unread article(s)".format(
-                    c, ac, self.__count_unread_articles())),
-                make_path('icons', 'brss-engine.svg'))
-            n.show()
+            try:
+                n = Notify.Notification.new(
+                    _("BRss: Update report"),
+                    _("Updated {0} feeds\n{1} new article(s)\n{2} unread article(s)".format(
+                        c, ac, self.__count_unread_articles())),
+                    make_path('icons', 'brss-engine.svg'))
+                n.show()
+            except:pass
 
 def main():
     init_dirs()

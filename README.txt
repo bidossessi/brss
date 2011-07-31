@@ -42,22 +42,18 @@ How to install this modules may vary depending on your distribution.
 In Archlinux run the following command as root:
 
 # pacman -S dbus-python pygobject python2-feedparser python-pysqlite gtk3 \
-    libwebkit3 libnotify gcc gettext
+    libwebkit3 libnotify gcc gettext glib2
 
 1. Extract the archive
 
-$ tar zxf brss-0.8.5dev.tar.gz
-$ cd brss-0.8.5dev
+$ tar zxf brss-0.8.12.tar.gz
+$ cd brss-0.8.12
 
 2. Install
 
 $ sudo python setup.py install
 
-3. For some reason, the schema is not copied during installation, so do it manually.
-
-$ sudo cp brss/schemas/com.itgears.BRss.gschema.xml /usr/share/glib-2.0/schemas/
-
-4. Compile the schema folder
+3. Compile the schema folder
 
 $ sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
 

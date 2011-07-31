@@ -21,8 +21,6 @@
 #       MA 02110-1301, USA.
 #       
 #       
-from gi.repository  import Gio
-from gi.repository  import GLib
 
 from engine         import main as run_engine
 from reader         import main as run_reader
