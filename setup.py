@@ -34,9 +34,9 @@ from brss import msgfmt
 
 DATA = [
         (os.path.join(sys.prefix, "share", "applications"), glob.glob("applications/*")),
-        (os.path.join(sys.prefix,"icons","hicolor"), glob.glob("icons/hicolor/*")),
-        (os.path.join(sys.prefix,"pixmaps"), glob.glob("pixmaps/*")),
-        (os.path.join(sys.prefix,"glib-2.0","schemas"), glob.glob("schemas/*")),
+        (os.path.join(sys.prefix, "share", "icons", "hicolor"), glob.glob("icons/hicolor/*")),
+        (os.path.join(sys.prefix, "share", "pixmaps"), glob.glob("pixmaps/*")),
+        (os.path.join(sys.prefix, "share", "glib-2.0","schemas"), glob.glob("schemas/*")),
         ]
 
 class build_trans(cmd.Command):
