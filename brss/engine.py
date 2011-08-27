@@ -386,14 +386,14 @@ class Engine (dbus.service.Object):
             x = ''
         if item and item.has_key('type'):
             if item['type'] == 'feed':
-                query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date ASC'.format(item['id'], x)
+                query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date DESC'.format(item['id'], x)
                 return self.__make_articles_list(query)
             if item['type'] == 'category':
                 # recurse
                 feeds = self.__get_feeds_for(item)
                 articles = []
                 for f in feeds:
-                    query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date ASC'.format(f['id'], x)
+                    query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE feed_id = "{0}" {1} ORDER BY date DESC'.format(f['id'], x)
                     articles.extend(self.__make_articles_list(query))
                 return articles
             # special cases
@@ -1069,12 +1069,12 @@ class Engine (dbus.service.Object):
         return c[0]
     def __get_unread_articles(self):
         articles = []
-        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE read = 0 ORDER BY date ASC'
+        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE read = 0 ORDER BY date DESC'
         # run query
         return self.__make_articles_list(query)
     def __get_starred_articles(self):
         articles = []
-        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE starred = 1 ORDER BY date ASC'
+        query = 'SELECT id,read,starred,title,date,url,feed_id FROM articles WHERE starred = 1 ORDER BY date DESC'
         # run query
         return self.__make_articles_list(query)
     def __swap_image_tags(self, article):

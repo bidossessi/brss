@@ -32,7 +32,7 @@ import sys
 from gi.repository import GdkPixbuf
 from gi.repository import GLib
 
-__version__         = '0.8.13'
+__version__         = '0.8.15'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]

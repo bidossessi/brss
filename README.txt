@@ -46,8 +46,8 @@ In Archlinux run the following command as root:
 
 1. Extract the archive
 
-$ tar zxf brss-0.8.13.tar.gz
-$ cd brss-0.8.13
+$ tar zxf brss-0.8.15.tar.gz
+$ cd brss-0.8.15
 
 2. Install
 

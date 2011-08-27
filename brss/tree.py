@@ -128,7 +128,11 @@ class Tree (Gtk.VBox, GObject.GObject):
         
     def __setup_icons(self, path, stock_id):
         icon = Gio.file_new_for_path(path)
-        if icon.query_exists(None) and not icon in self.__favlist:                
+        if icon.query_exists(None) and not icon in self.__favlist:
+            inf = icon.query_info("*", Gio.FileQueryInfoFlags.NONE, None)
+            if not inf.get_size() > 0:
+                icon.delete(None)
+                return
             factory = Gtk.IconFactory()
             s = Gtk.IconSource.new()
             s.set_filename(icon.get_path())
