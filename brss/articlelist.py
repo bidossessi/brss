@@ -84,7 +84,7 @@ class ArticleList (Gtk.VBox, GObject.GObject):
         self.log = logger
         #TODO: break init up 
         Gtk.VBox.__init__(self, spacing=3)
-        self.__gobject_init__()
+        GObject.GObject.__init__(self)
         self.settings = Gio.Settings.new(BASE_KEY)
         self.current_item   = None
         self.last_search    = None

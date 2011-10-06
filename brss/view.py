@@ -58,7 +58,7 @@ class View (Gtk.VBox, GObject.GObject):
     def __init__(self, logger):
         self.log = logger
         Gtk.VBox.__init__(self, spacing=3)
-        self.__gobject_init__()
+        GObject.GObject.__init__(self)
         # top navi
         self.set_no_show_all(True)
         tbox = Gtk.HBox(spacing=3)

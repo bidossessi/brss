@@ -26,9 +26,9 @@ class GeneratorTask(object):
         for ret in self.generator(*args, **kwargs):
             if self._stopped:
                 break
-            GLib.idle_add(0, self._loop, ret)
+            GLib.idle_add(self._loop, ret)
         if self.complete_callback is not None:
-            GLib.idle_add(0, self.complete_callback, None)
+            GLib.idle_add(self.complete_callback, None)
 
     def _loop(self, ret):
         if ret is None:

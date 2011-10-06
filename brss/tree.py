@@ -57,7 +57,7 @@ class Tree (Gtk.VBox, GObject.GObject):
     
     def __init__(self,logger):
         self.log = logger
-        self.__gobject_init__()
+        GObject.GObject.__init__(self)
         GObject.type_register(Tree)
         #store (type,id,name,count,stock-id, url, category_id) 
         self.lmap = ['type','id','name','count','stock-id','url','category']

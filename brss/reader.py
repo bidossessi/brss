@@ -83,7 +83,7 @@ class Reader (Gtk.Window, GObject.GObject):
         return "Reader"
     def __init__(self):
         Gtk.Window.__init__(self)
-        self.__gobject_init__()
+        GObject.GObject.__init__(self)
         GObject.type_register(Reader)
         self.log = Logger("reader.log", "BRss-Reader")
         self.settings = Gio.Settings.new(BASE_KEY)

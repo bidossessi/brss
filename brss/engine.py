@@ -591,7 +591,6 @@ class Engine (dbus.service.Object):
                 self.log.debug("Timeout removed: {0}".format(GLib.source_remove(self.timeout_id)))
             interval = settings.get_int('update-interval')
             self.timeout_id = GLib.timeout_add_seconds(
-                    0, 
                     interval*60, 
                     self.__timed_update, 
                     None)

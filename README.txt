@@ -41,13 +41,13 @@ python-dbus
 How to install this modules may vary depending on your distribution.
 In Archlinux run the following command as root:
 
-# pacman -S dbus-python pygobject python2-feedparser python-pysqlite gtk3 \
+# pacman -S dbus-python python2-gobject python2-feedparser python-pysqlite gtk3 \
     libwebkit3 libnotify gcc gettext glib2
 
 1. Extract the archive
 
-$ tar zxf brss-0.8.15.tar.gz
-$ cd brss-0.8.15
+$ tar zxf brss-0.8.16.tar.gz
+$ cd brss-0.8.16
 
 2. Install
 
