@@ -94,8 +94,8 @@ setup(
     version = __version__,
     description = "Offline DBus RSS reader",
     fullname = "BRss Offline RSS Reader",
-    long_description = open('README.md').read(),
-    url = "https://github.com/bidossessi/brss"
+    long_description = open('README.txt').read(),
+    url = "https://github.com/bidossessi/brss",
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Environment :: No Input/Output (Daemon)",
