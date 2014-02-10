@@ -2,25 +2,25 @@
 # -*- coding: utf-8 -*-
 #
 #       functions.py
-#       
+#
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
-#       
+#
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
 #       (at your option) any later version.
-#       
+#
 #       This program is distributed in the hope that it will be useful,
 #       but WITHOUT ANY WARRANTY; without even the implied warranty of
 #       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #       GNU General Public License for more details.
-#       
+#
 #       You should have received a copy of the GNU General Public License
 #       along with this program; if not, write to the Free Software
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
-#       
-#       
+#
+#
 
 from gi.repository import Gio
 
@@ -32,7 +32,7 @@ import sys
 from gi.repository import GdkPixbuf
 from gi.repository import GLib
 
-__version__         = '0.8.17'
+__version__         = '0.9'
 __authors__         = ["Bidossessi SODONON"]
 __maintainers__     = ["Bidossessi SODONON"]
 __documenters__     = ["Bidossessi SODONON"]
@@ -54,11 +54,11 @@ images_dir          = Gio.file_new_for_path(IMAGES_PATH)
 def init_dirs():
     try:
         base_dir.make_directory(None)
-    except:pass 
+    except:pass
     try:favicon_dir.make_directory(None)
-    except:pass 
+    except:pass
     try:images_dir.make_directory(None)
-    except:pass 
+    except:pass
 
 def make_date(string):
     date = datetime.fromtimestamp(int(string))
