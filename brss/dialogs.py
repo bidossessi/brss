@@ -2,32 +2,32 @@
 # -*- coding: utf-8 -*-
 #
 #       dialogs.py
-#       
+#
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
-#       
+#
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
 #       (at your option) any later version.
-#       
+#
 #       This program is distributed in the hope that it will be useful,
 #       but WITHOUT ANY WARRANTY; without even the implied warranty of
 #       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #       GNU General Public License for more details.
-#       
+#
 #       You should have received a copy of the GNU General Public License
 #       along with this program; if not, write to the Free Software
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
-#       
-#       
+#
+#
 
 from gi.repository import Gtk
 from gi.repository import Gio
 import i18n
 _ = i18n.language.gettext
 
-class Custom:
+class Custom(object):
     def __init__(self, name, header):
         self.name = name
         self.header = header
@@ -52,14 +52,14 @@ class NumEntry(Gtk.SpinButton, Custom) :
         self.set_adjustment(a)
         Custom.__init__(self, name, header)
         #~ self.set_alignment(1.0)
-    
+
     #~ def set_value(self, value):
         #~ Gtk.SpinButton.set_value(self, value)
 
     def get_value(self, suppress=False):
         value = self.get_value_as_int()
         return value
-        
+
 class CheckBtn(Gtk.CheckButton, Custom) :
 
     def __init__(self, name, header):
@@ -94,7 +94,7 @@ class Dialog(Gtk.Dialog):
             self.make_widget(w, settings)
         self.grid(self.__widget_list)
         self.show_all()
-        
+
     def __create_ui(self):
         self.centeral = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         self.centeral.set_padding(5,5,5,5)
@@ -109,7 +109,7 @@ class Dialog(Gtk.Dialog):
         header = Gtk.Label(name + " :")
         header.set_alignment(0, 0.5)
         return header
-    
+
     def make_widget(self, w, settings):
         # w = {'name':?, 'type':?}
         gmap = {'bool':CheckBtn, 'str':TextEntry, 'int':NumEntry}
@@ -128,7 +128,7 @@ class Dialog(Gtk.Dialog):
             if w.has_key('value'):
                 widget.set_value(w['value'])
         self.__widget_list.append(widget)
-    
+
     def grid(self, widget_list):
         """
         Build a table of widgets.
@@ -138,7 +138,7 @@ class Dialog(Gtk.Dialog):
         box.set_row_spacings(5)
         lpid = 0
         tpid = 0
-        
+
         for widget in widget_list:
             header = self.__make_header(widget.header)
             if type(widget) == CheckBtn:
@@ -157,7 +157,7 @@ class Dialog(Gtk.Dialog):
         for w in self.__widget_list:
             response[w.name] = w.get_value()
         return response
-    
+
     def on_response(self, dialog, response_id):
         if response_id == Gtk.ResponseType.OK:
             self.response = self.collect_response()

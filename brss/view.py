@@ -2,25 +2,25 @@
 # -*- coding: utf-8 -*-
 #
 #       view.py
-#       
+#
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
-#       
+#
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
 #       (at your option) any later version.
-#       
+#
 #       This program is distributed in the hope that it will be useful,
 #       but WITHOUT ANY WARRANTY; without even the implied warranty of
 #       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #       GNU General Public License for more details.
-#       
+#
 #       You should have received a copy of the GNU General Public License
 #       along with this program; if not, write to the Free Software
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
-#       
-#       
+#
+#
 
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -28,7 +28,7 @@ from gi.repository import Pango
 from gi.repository import GObject
 from gi.repository import WebKit
 from brss.common import make_date
-    
+
 class View (Gtk.VBox, GObject.GObject):
     """
         The feedview displays the currently selected feed item.
@@ -37,20 +37,20 @@ class View (Gtk.VBox, GObject.GObject):
     """
     __gsignals__ = {
         "article-loaded" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
             ()),
         "link-clicked" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
             (GObject.TYPE_STRING,)),
-        
+
         "link-hovered-in" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
             (GObject.TYPE_STRING,)),
         "link-hovered-out" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
             ()),
         }
@@ -114,16 +114,17 @@ class View (Gtk.VBox, GObject.GObject):
             self.feed_img.set_from_stock(art['feed_id'], Gtk.IconSize.BUTTON)
         except:
             self.log.debug('{0}: Showing default feed icon'.format(self))
-            self.feed_img.set_from_stock('missing', Gtk.IconSize.BUTTON)        
+            self.feed_img.set_from_stock('missing', Gtk.IconSize.BUTTON)
         self.star_this(art)
         self.valid_links = links
         self.valid_links.append("file:")
         self.link_button.set_label("[{0}] - {1}".format(
                 make_date(art['date']),art['title'].encode('utf-8')))
         self.link_button.set_uri(art['link'])
-        self.feedview.load_string(art['content'], "text/html", "utf-8", "file:")
+        print art['content']
+        self.feedview.load_html_string(art['content'], "file:///")
         self.emit('article-loaded')
-    
+
     def __hover_webview(self, caller, alt, url):
         if url:
             self.emit('link-hovered-in', url)
@@ -137,18 +138,18 @@ class View (Gtk.VBox, GObject.GObject):
     def __override_clicks(self, frame, request, navigation_action, policy_decision, data=None):
         uri = navigation_action.get_uri()
         if uri in self.valid_links:
-            return 0 # Let browse
+            return 1 # Let browse
         else:
-            self.emit('link-clicked', uri)
-            return 1 # Don't let browse
-    
+            #self.emit('link-clicked', uri)
+            return 0 # Don't let browse
+
     def clear(self, caller):
         self.link_button.set_label("No Article")
         nd = """
         <html>
         <h1>No Article to show</h1>
         <p>The item you selected doesn't seem to have any articles available.</p>
-        <p><em>If this doesn't change after a while, maybe you should check 
+        <p><em>If this doesn't change after a while, maybe you should check
         your feeds' validity.</em></p>
         </html>"""
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")
@@ -166,7 +167,7 @@ class View (Gtk.VBox, GObject.GObject):
             <p>For some reason, BRss' <strong class="red">Feed Engine</strong> is not responding.</p>
             <p>Please try and restart the engine.<br/>
             You can then reconnect the reader from the <strong>Feeds</strong> menu.</p>
-            <p><em>Tip: You can also simply restart the reader, as it tries 
+            <p><em>Tip: You can also simply restart the reader, as it tries
             to launch the engine at startup.</em></p>
             </html>"""
         self.feedview.load_string(nd, "text/html", "utf-8", "file:")

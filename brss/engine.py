@@ -296,9 +296,14 @@ class FeedGetter(threading.Thread):
         return article
 
     def __log_progress(self, size, total, name):
-        perc = (size/total)*100
-        self.log.debug("Getting {0}: {1}%".format(name, perc))
-        
+        try:
+            perc = (size/total)*100
+            self.log.debug("Getting {0}: {1}%".format(name, perc))
+        except ZeroDivisionError, e:
+            self.log.debug("File unreachable")
+        except Exception, e:
+            self.log.exception(e) 
+            
 class Engine (dbus.service.Object):
     """ 
     The feed engine provides DBus Feed and Category CRUD services.
@@ -325,7 +330,7 @@ class Engine (dbus.service.Object):
             return
         if item and item.has_key('type') and item['type'] in ['feed', 'category']:
             if item['type'] == 'feed':
-                self.__update_feeds(item)
+                self.__edit_feed(item)
             elif item['type'] == 'category':
                 self.__edit_category(item)    
     @dbus.service.method('com.itgears.BRss.Engine')
@@ -690,6 +695,7 @@ class Engine (dbus.service.Object):
                 self.log.warning("Error occured: {0}".format(e))
                 
             feed['timestamp'] = time.time()
+            # If we found articles, set this feed not to be parsed
             if articles:
                 feed['parse'] = 0
             else:
@@ -718,7 +724,7 @@ class Engine (dbus.service.Object):
                     self.__add_article(art)
             self.__clean_up_feed(feed) # returns (total, unread, starred)
 
-    ## Retreive (C*R*UD)
+    ## Retrieve (C*R*UD)
     def __get_feed(self, feed_id):
         cursor = self.conn.cursor()
         cursor.execute('SELECT * FROM feeds WHERE id = ?', [feed_id])
@@ -807,18 +813,18 @@ class Engine (dbus.service.Object):
             assert self.__item_exists('feeds', 'url', feed['url']) == True
             self.log.debug("Editing feed {0}".format(feed['url']))
             # update in database
-            q = 'UPDATE feeds SET name = "{0}", url = "{1}", timestamp = "{2}", parse = "{3}" WHERE id = "{4}"'.format(
+            q = 'UPDATE feeds SET name = "{0}", url = "{1}", category_id= "{2}", timestamp = "{3}" WHERE id = "{4}"'.format(
                 feed['name'], 
                 feed['url'], 
-                feed['timestamp'],
-                feed['parse'],
+                feed['category'], 
+                time.time(),
                 feed['id'])
             cursor = self.conn.cursor()
             cursor.execute(q)
             self.conn.commit()
             cursor.close()
             #~ self.updated(feed)
-            #~ self.notice('info', "[Feed] {0} edited".format(feed['url']))
+            self.notice('info', "[Feed] {0} edited".format(feed['name']))
         except AssertionError:
             self.warning(_("[Feed] {0} doesn't exist, or is a duplicate! Aborting".format(feed['url'])))
     def __update_all(self):

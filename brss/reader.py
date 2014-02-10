@@ -2,25 +2,25 @@
 # -*- coding: utf-8 -*-
 #
 #       reader.py
-#       
+#
 #       Copyright 2011 Bidossessi Sodonon <bidossessi.sodonon@yahoo.fr>
-#       
+#
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
 #       (at your option) any later version.
-#       
+#
 #       This program is distributed in the hope that it will be useful,
 #       but WITHOUT ANY WARRANTY; without even the implied warranty of
 #       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #       GNU General Public License for more details.
-#       
+#
 #       You should have received a copy of the GNU General Public License
 #       along with this program; if not, write to the Free Software
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
-#       
-#       
+#
+#
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Gio
@@ -50,33 +50,33 @@ from common      import __version__, __maintainers__
 
 class Reader (Gtk.Window, GObject.GObject):
     """
-        
+
     """
     __gsignals__ = {
         "loaded" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
             ()),
         "next-article" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
-            ()),            
+            ()),
         "previous-article" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
-            ()),            
+            ()),
         "next-feed" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
-            ()),            
+            ()),
         "previous-feed" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
-            ()),            
+            ()),
         "no-engine" : (
-            GObject.SignalFlags.RUN_FIRST, 
+            GObject.SignalFlags.RUN_FIRST,
             None,
-            ()),            
+            ()),
         }
 
     def __repr__(self):
@@ -102,7 +102,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.__get_engine()
         # ready to go
         self.emit('loaded')
-    
+
     def __check_engine(self):
         bus = dbus.SessionBus()
         try:
@@ -110,14 +110,14 @@ class Reader (Gtk.Window, GObject.GObject):
         except:
             return False
         return engine
-        
+
     def __get_engine(self):
         self.engine = self.__check_engine()
         if not self.engine:
             self.log.critical("{0}: Couldn't get a DBus connection; quitting.".format(self))
-            self.alert.error(_("Could not connect to Engine"), 
+            self.alert.error(_("Could not connect to Engine"),
                 _("BRss will now quit.\nPlease make sure that the engine is running and restart the application"))
-            self.quit()            
+            self.quit()
         self.create              = self.engine.get_dbus_method('create', ENGINE_DBUS_KEY)
         self.edit                = self.engine.get_dbus_method('edit', ENGINE_DBUS_KEY)
         self.update              = self.engine.get_dbus_method('update', ENGINE_DBUS_KEY)
@@ -247,10 +247,10 @@ class Reader (Gtk.Window, GObject.GObject):
         self.ui.insert_action_group(self.rag, 1)
         self.ui.add_ui_from_string(ui_string)
         self.add_accel_group(self.ui.get_accel_group())
-    
+
     def __reset_title(self, *args):
         self.set_title('BRss Reader')
-    
+
     def __stop_updates(self, *args):
         self.stop_update(
             reply_handler=self.__to_log,
@@ -271,6 +271,10 @@ class Reader (Gtk.Window, GObject.GObject):
         box = Gtk.VBox(spacing=3)
         box.pack_start(self.ui.get_widget('/Menubar'), False, True, 0)
         box.pack_start(self.ui.get_widget('/Toolbar'), False, True, 0)
+        #setting GTK3 style
+        ctx= self.ui.get_widget('/Toolbar').get_style_context()
+        print "UI Context: ",ctx
+        ctx.add_class(Gtk.STYLE_CLASS_PRIMARY_TOOLBAR)
         widget = self.ag.get_action('StopUpdate')
         widget.set_sensitive(False)
         box.pack_start(al, True, True, 0)
@@ -286,7 +290,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.show_all()
         if not self.settings.get_boolean('show-status'):
             self.status.hide()
-        
+
 
     def __connect_signals(self):    # signals
         self.log.debug("{0}: Connecting all signals".format(self))
@@ -325,8 +329,8 @@ class Reader (Gtk.Window, GObject.GObject):
         self.engine.connect_to_signal('complete', self.tree.select_current)
         # might want to highlight these a bit more
         self.engine.connect_to_signal('warning', self.status.warning)
-    
-    
+
+
     def __import_feeds(self, *args):
         dialog = Gtk.FileChooserDialog(_("Open..."),
                                     self,
@@ -353,11 +357,11 @@ class Reader (Gtk.Window, GObject.GObject):
 
         if response == Gtk.ResponseType.OK:
             self.log.debug("{0}: Trying to import from OPML file {1}".format(self, filename))
-            self.import_opml(filename, 
+            self.import_opml(filename,
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
 
-    def __export_feeds(self, *args):        
+    def __export_feeds(self, *args):
         dialog = Gtk.FileChooserDialog(_("Save..."),
                                     self,
                                     Gtk.FileChooserAction.SAVE,
@@ -376,13 +380,13 @@ class Reader (Gtk.Window, GObject.GObject):
         response = dialog.run()
         filename = dialog.get_filename()
         dialog.destroy()
-        
+
         if response == Gtk.ResponseType.OK:
             self.log.debug("{0}: Trying to export to OPML file {1}".format(self, filename))
-            self.export_opml(filename, 
+            self.export_opml(filename,
                 reply_handler=self.__to_log,
                 error_handler=self.__to_log)
-        
+
     def __populate_menu(self, *args):
         self.log.debug("{0}: Populating menu".format(self))
         self.get_menu_items(
@@ -391,7 +395,7 @@ class Reader (Gtk.Window, GObject.GObject):
         self.count_special(
             reply_handler=self.tree.make_special_folders,
             error_handler=self.__to_log)
-        
+
     def __toggle_starred(self, ilist, item):
         self.toggle_starred(item,
                 reply_handler=self.__to_log,
@@ -402,10 +406,10 @@ class Reader (Gtk.Window, GObject.GObject):
                 error_handler=self.__to_log)
     def __load_articles(self, tree, item):
         self.log.debug("{0}: Loading articles for feed {1}".format(self, item['name']))
-        self.get_articles_for(item, 
+        self.get_articles_for(item,
                 reply_handler=self.ilist.load_list,
                 error_handler=self.__to_log)
-    
+
     def __add_category(self, *args):
         args = [
         {'type':'str','name':'name', 'header':_('Name') },
@@ -431,20 +435,20 @@ class Reader (Gtk.Window, GObject.GObject):
 
     def __edit_prefs(self, *args):
         kmap = {
-            'hide-read':'bool', 
-            'update-interval':'int', 
-            'max-articles':'int', 
-            'use-notify':'bool', 
-            'on-the-fly':'bool', 
-            'enable-debug':'bool', 
+            'hide-read':'bool',
+            'update-interval':'int',
+            'max-articles':'int',
+            'use-notify':'bool',
+            'on-the-fly':'bool',
+            'enable-debug':'bool',
             'auto-update':'bool',
             'live-search':'bool',
             'auto-hide-search':'bool',
             'show-status':'bool',
             }
         hmap = {
-            'hide-read':_('Hide Read Items'), 
-            'update-interval':_('Update interval (in minutes)'), 
+            'hide-read':_('Hide Read Items'),
+            'update-interval':_('Update interval (in minutes)'),
             'max-articles':_('Maximum number of articles to keep (excluding starred)'),
             'auto-update':_('Allow the engine to download new articles automatically.'),
             'on-the-fly':_('Start downloading articles for new feeds on-the-fly'),
@@ -458,7 +462,7 @@ class Reader (Gtk.Window, GObject.GObject):
         for k,v in kmap.iteritems():
             data.append({
                 'type':v,
-                'name':k, 
+                'name':k,
                 'header':hmap.get(k),#FIXME: can this be gotten from gsettings?
                 })
         d = Dialog(self, _('Edit preferences'), data, self.settings)
@@ -466,7 +470,7 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
     def __about(self, *args):
         """Shows the about message dialog"""
-        LICENSE = """   
+        LICENSE = """
             This program is free software: you can redistribute it and/or modify
             it under the terms of the GNU General Public License as published by
             the Free Software Foundation, either version 3 of the License, or
@@ -499,7 +503,8 @@ class Reader (Gtk.Window, GObject.GObject):
             reply_handler=self.__to_log,
             error_handler=self.__to_log)
     def __edit_item(self, *args):
-        item = self.tree.current_item
+        item = self.tree.current_item #FIXME: not good!!
+        print item
         if item['type'] == 'category':
             args = [{'type':'str','name':'name', 'header':_('Name'), 'value':item['name'] },]
             d = Dialog(self, _('Edit this category'), args)
@@ -513,7 +518,7 @@ class Reader (Gtk.Window, GObject.GObject):
         d.destroy()
         if r == Gtk.ResponseType.OK:
             self.__edit(item)
-        
+
     def __edit(self, item):
         self.log.debug("About to edit item: {0}".format(item))
         self.edit(item,
@@ -541,7 +546,7 @@ class Reader (Gtk.Window, GObject.GObject):
                 reply_handler=self.__populate_menu,
                 error_handler=self.__to_log)
     def __load_article(self, ilist, item):
-        self.get_article(item, 
+        self.get_article(item,
                 reply_handler=self.view.show_article,
                 error_handler=self.__to_log)
     def __handle_added(self, item):
@@ -565,13 +570,13 @@ class Reader (Gtk.Window, GObject.GObject):
                 error_handler=self.__to_log)
         elif name == _('Mark all as read'):
             self.ilist.mark_all_read()
-        
+
         elif name == _('Open in Browser'):
             self.__to_browser(caller, item['url'])
-        
+
         elif name == _('Copy Url to Clipboard'):
             self.__to_clipboard(item['url'])
-        
+
         elif name in [_('Delete'), _('Delete Feed'), _('Delete Category')]:
             self.__delete(item)
         elif name == _('Edit'):
@@ -626,14 +631,14 @@ class Reader (Gtk.Window, GObject.GObject):
             self.log.warning(a)
             if type(a) == dbus.exceptions.DBusException:
                 self.emit('no-engine')
-    
+
     def __to_browser(self, caller, link):
         self.log.debug("Trying to open link '{0}' in browser".format(link))
         orig_link = self.view.link_button.get_uri()
         self.view.link_button.set_uri(link)
         self.view.link_button.activate()
         self.view.link_button.set_uri(orig_link)
-        
+
     def __previous_article(self, *args):
         self.emit('previous-article')
     def __next_article(self, *args):
@@ -646,7 +651,7 @@ class Reader (Gtk.Window, GObject.GObject):
         clipboard = Gtk.Clipboard()
         clipboard.set_text(link.encode("utf8"), -1)
         clipboard.store()
-    
+
     def __connect_accels (self, widget):
         widget.filterentry.connect('focus-in-event', self.__toggle_accels, False)
         widget.filterentry.connect('focus-out-event', self.__toggle_accels, True)
@@ -722,13 +727,13 @@ class ReaderApplication :
 
     def activate(self, app, *args):
         self.reader.start()
-        
+
     def open(self, app, files, nfiles, hint):
         print files, nfiles, hint
-    
+
     def log_signals(self, *args):
         print args
-        
+
     def check_engine(self):
         bus = dbus.SessionBus()
         try:
@@ -767,10 +772,10 @@ class ReaderApplication :
                 print (_("Another instance is already running"))
         else:
             print (_("Could not start engine. Aborting"))
-            
+
 def main():
     r = ReaderApplication()
     r.run()
-    
+
 if __name__ == '__main__':
     main()
